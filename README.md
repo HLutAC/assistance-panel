@@ -1,12 +1,12 @@
-# Assistance Panel - Hikvision Reporting Dashboard
+# Access Control & Reporting Dashboard
 
-Un panel de control de alto rendimiento diseñado para transformar los logs crudos de tránsito de Hikvision en inteligencia institucional accionable. Construido con una estética **Cloud Premium** y una arquitectura de seguridad descentralizada.
+Un panel de control de alto rendimiento diseñado para transformar los logs crudos de sistemas de acceso en inteligencia operativa accionable. Construido con una estética **Cloud Premium** y una arquitectura de seguridad descentralizada.
 
 ## ✨ Características Principales
 
 - **KPIs en Tiempo Real**: Resumen dinámico de ingresos, salidas y usuarios únicos del día actual.
-- **Analítica Avanzada**: 5 gráficos interactivos (Flujo horario, Uso de carriles, Heatmap temporal, Distribución global y Secuencias cronológicas).
-- **Integración Académica**: Cruce automático con `Personal_information.csv` para mostrar la Escuela/Carrera de cada colaborador.
+- **Analítica Avanzada**: 5 gráficos interactivos (Flujo horario, Uso de dispositivos, Heatmap temporal, Distribución global y Secuencias cronológicas).
+- **Integración con Personal**: Cruce automático con bases de datos de personal para mostrar la afiliación/escuela de cada colaborador.
 - **Historial Interactivo**: Navegación por fechas históricas con expansión de movimientos detallada.
 - **Modo Impresión**: Optimizado para reportes en blanco y negro de alta legibilidad.
 
@@ -14,15 +14,15 @@ Un panel de control de alto rendimiento diseñado para transformar los logs crud
 
 El proyecto se divide en dos capas principales:
 
-1. **Procesador de Datos (Python)**: Limpia, deduplica (ventana de 5 min) y enriquece los datos crudos de los CSVs de Hikvision.
+1. **Procesador de Datos (Python)**: Limpia, deduplica (ventana de 5 min) y enriquece los datos crudos de las fuentes CSV.
 2. **Dashboard Frontend (React + TS + Vite)**: Una interfaz fluida y data-dense que visualiza los resultados procesados.
 
 ## 🔒 Seguridad y Configuración
 
-Toda la información institucional sensible está externalizada y protegida por `.gitignore`:
+Toda la información sensible está externalizada y protegida por `.gitignore`:
 
 - **`.env`**: Define las rutas de los archivos CSV de transacciones y personal.
-- **`config.json`**: Contiene el mapeo técnico de los carriles y puntos de control.
+- **`config.json`**: Contiene el mapeo técnico de los dispositivos y puntos de control.
 
 ## 🚀 Guía de Inicio Rápido
 
@@ -51,4 +51,4 @@ npm run build
 - **Backend**: Python 3.
 
 ---
-© 2026 National University of Moquegua - OTI
+© 2026 Admin Dashboard Suite - v3.0.0

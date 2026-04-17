@@ -99,7 +99,7 @@ const App: React.FC = () => {
               <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                 <span>Generado el: {new Date().toLocaleString()}</span>
                 <span>Página 1 de 1</span>
-                <span>ReportSystem Cloud Premium v3.0.0</span>
+                <span>Admin Dashboard Suite v3.0.0</span>
               </div>
             </div>
           </div>

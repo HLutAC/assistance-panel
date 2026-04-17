@@ -28,7 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center shadow-lg shadow-zinc-950/20 text-white font-black text-xl leading-none">
               R
             </div>
-            <span className="font-bold text-xl text-zinc-950 tracking-tight">Report<span className="text-primary-500">System</span></span>
+            <span className="font-bold text-xl text-zinc-950 tracking-tight">Admin<span className="text-primary-500">Panel</span></span>
           </div>
         )}
         <button 

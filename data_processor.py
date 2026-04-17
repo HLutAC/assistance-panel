@@ -174,6 +174,10 @@ def process_data():
             user_names[r['ID']] = f"{r['Nombre']} {r['Apellido']}"
 
         sequence_chart = []
+        # Reporte
+        report = []
+        report.append("# Reporte Analítico de Tránsito")
+        report.append(f"\nGenerado el: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         for uid, name in list(user_names.items())[:10]:
             user_events = [r for r in clean_data if r['ID'] == uid]
             sequence_chart.append({
@@ -220,6 +224,9 @@ def process_data():
 
         output_json = 'src/data/dashboard_data.json'
         os.makedirs('src/data', exist_ok=True)
+        # Guardar resultados
+        with open('reporte_analitico.md', 'w', encoding='utf-8') as f:
+            f.write("\n".join(report))
         with open(output_json, 'w', encoding='utf-8') as f:
             json.dump(dashboard_data, f, ensure_ascii=False, indent=2)
 
