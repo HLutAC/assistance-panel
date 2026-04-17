@@ -72,6 +72,20 @@ Los archivos finales se ubicarán en la carpeta `dist`.
 
 ---
 
+## Escalabilidad y Límites
+
+El dashboard está diseñado para ser ligero y portable (Static Site). A continuación, se detallan las recomendaciones según el volumen de datos:
+
+| Volumen (Registros) | Formato | Recomendación |
+| :--- | :--- | :--- |
+| **< 100,000** | JSON | Rendimiento óptimo. |
+| **100k - 500k** | JSON | Funcional, pero el tiempo de carga inicial aumentará (~2-5s). |
+| **> 500k** | Base de Datos | Se recomienda migrar el procesamiento a un backend con **SQLite** o **PostgreSQL** y servir los datos vía API. |
+
+Para mantener un rendimiento fluido, se recomienda archivar los registros de años anteriores en carpetas separadas si el archivo principal supera los 50MB.
+
+---
+
 ## Stack tecnológico
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS.
 - **Visualización**: Recharts.
