@@ -1,92 +1,81 @@
-# Access Control & Reporting Dashboard
+# SmartAccess Reporting Framework
 
-Este proyecto permite transformar registros crudos de sistemas de control de acceso en información útil para el análisis operativo. Está diseñado para trabajar con datos exportados (CSV) de sistemas como Hikvision y convertirlos en visualizaciones claras y reportes utilizables.
+Plataforma profesional de análisis y gestión de reportes para sistemas de control de acceso. Este framework transforma registros crudos (CSV) en información analítica de alta fidelidad, respaldada por una arquitectura de base de datos relacional para escalabilidad a largo plazo.
 
 ## Características principales
 
-### KPIs diarios
-Muestra un resumen rápido de ingresos, salidas y cantidad de personas únicas en el día seleccionado.
+### KPIs en Tiempo Real
+Visualización instantánea de ingresos, salidas y usuarios únicos, servidos directamente desde PostgreSQL.
 
-### Visualización de datos
-Incluye gráficos orientados al análisis detallado:
-- **Flujo de personas por hora**: Identificación de horas pico.
-- **Uso de carriles/dispositivos**: Análisis de carga por punto de acceso.
-- **Heatmap de actividad (hora vs día)**: Relación entre frecuencia horaria y diaria.
-- **Distribución general de ingresos y salidas**: Balance de ingresos y salidas.
-- **Secuencia temporal de eventos por persona**: Registro cronológico de movimientos.
+### Suite Analítica Avanzada
+- **Flujo Horario**: Comparativa de ingresos vs salidas por hora.
+- **Uso de Carriles**: Distribución de carga por punto de acceso.
+- **Mapas de Calor**: Análisis de intensidad temporal (Hora vs Día).
+- **Secuencias Individuales**: Seguimiento cronológico para auditorías detalladas.
 
-### Funcionalidades adicionales
-- **Integración con datos de personal**: Cruce de registros con bases externas para identificar área, escuela o afiliación.
-- **Histórico navegable**: Consulta de fechas anteriores y revisión del detalle de movimientos.
-- **Modo impresión**: Vista simplificada diseñada para exportar o imprimir reportes de forma legible.
+### Fidelidad de Datos Dual
+- **Resumen Ejecutivo**: Datos limpios y deduplicados para métricas operativas.
+- **Bitácora de Auditoría**: Transparencia total con registros crudos sin procesar.
 
 ---
 
 ## Arquitectura
-El sistema está dividido en dos componentes principales:
 
-### 1. Procesamiento de datos (Python)
-Se encarga de la lógica de limpieza y estructuración:
-- Limpieza de datos crudos.
-- Eliminación de duplicados mediante una ventana de tiempo definida.
-- Estandarización de formatos de fecha y texto.
-- Enriquecimiento de la información (asignación de carril y tipo de movimiento).
+El sistema utiliza un stack moderno diseñado para manejar años de historial de logs:
 
-### 2. Dashboard (React + TypeScript + Vite)
-Interfaz de usuario que consume los datos procesados y los presenta mediante gráficos interactivos y tablas de análisis.
+1.  **Base de Datos**: PostgreSQL 16 (Instancia local aislada).
+2.  **Backend API**: FastAPI (Motores de agregación SQL nativos).
+3.  **Frontend**: React + TypeScript + Tailwind CSS (Vite).
+4.  **Ingesta**: Python 3 con lógica de `UPSERT` incremental.
 
 ---
 
-## Configuración
-Los archivos sensibles y configuraciones locales no están versionados en el repositorio:
+## Instalación y Configuración
 
-- **.env**: Define las rutas de entrada para los archivos CSV de transacciones y personal.
-- **config.json**: Contiene el mapeo de identificadores de dispositivos a nombres de carriles y tipos de movimiento.
+### 1. Requisitos
+- Python 3.10+
+- Node.js & npm
+- PostgreSQL (Cliente `psql` disponible en el sistema)
 
-Asegúrate de configurar estos archivos antes de ejecutar el proyecto.
+### 2. Configuración Inicial
+Asegúrate de tener los archivos `.env` y `config.json` configurados en la raíz. El sistema inicializará su propia base de datos local en la primera ejecución.
 
 ---
 
-## Uso
+## Uso Operativo
 
-### 1. Procesar los datos
-El sistema cuenta con **Descubrimiento Automático**. Basta con colocar el archivo exportado (ej: `Transacciones_2026-04-30.csv`) en la carpeta raíz y ejecutar:
+### Paso 1: Procesar nuevos datos
+Coloca tus archivos `Transacciones_*.csv` en la raíz y sincroniza la base de datos:
 ```bash
-python3 data_processor.py
+./venv/bin/python data_processor.py
 ```
-El script detectará automáticamente el archivo más reciente basándose en el nombre y la fecha de modificación, eliminando la necesidad de configurar manualmente el nombre en el `.env`.
 
-### 2. Ejecutar el dashboard (desarrollo)
-Para iniciar el entorno de desarrollo:
+### Paso 2: Iniciar Servicios
+Para levantar la base de datos y la API:
 ```bash
-npm install
+./start_backend.sh
+```
+
+### Paso 3: Visualizar Dashboard
+En otra terminal, inicia la interfaz de usuario:
+```bash
 npm run dev
 ```
 
-### 3. Construir para producción
-Para generar los archivos listos para despliegue:
-```bash
-npm run build
-```
-Los archivos finales se ubicarán en la carpeta `dist`.
+---
+
+## Escalabilidad
+
+Gracias a la migración a **PostgreSQL**, el sistema está preparado para:
+- **Almacenamiento**: Millones de registros históricos.
+- **Velocidad**: Consultas indexadas y paginación en servidor.
+- **Integridad**: Prevención de duplicados mediante claves únicas compuestas.
 
 ---
 
-## Escalabilidad y Límites
-
-El dashboard está diseñado para ser ligero y portable (Static Site). A continuación, se detallan las recomendaciones según el volumen de datos:
-
-| Volumen (Registros) | Formato | Recomendación |
-| :--- | :--- | :--- |
-| **< 100,000** | JSON | Rendimiento óptimo. |
-| **100k - 500k** | JSON | Funcional, pero el tiempo de carga inicial aumentará (~2-5s). |
-| **> 500k** | Base de Datos | Se recomienda migrar el procesamiento a un backend con **SQLite** o **PostgreSQL** y servir los datos vía API. |
-
-Para mantener un rendimiento fluido, se recomienda archivar los registros de años anteriores en carpetas separadas si el archivo principal supera los 50MB.
-
----
-
-## Stack tecnológico
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS.
-- **Visualización**: Recharts.
-- **Procesamiento de datos**: Python 3 (Pandas).
+## Stack Tecnológico
+- **Core**: React, TypeScript, Vite.
+- **Estilos**: Tailwind CSS v4.
+- **Gráficos**: Recharts.
+- **Backend**: FastAPI, SQLAlchemy, Psycopg2.
+- **Base de Datos**: PostgreSQL.
