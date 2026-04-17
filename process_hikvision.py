@@ -8,16 +8,25 @@ def process_hikvision(file_path):
         print(f"Error: El archivo {file_path} no existe.")
         return
 
-    print(f"Procesando archivo: {file_path}")
-    
+    # Cargar información de personal (ID -> Escuela)
+    personal_info = {}
+    personal_info_path = "Personal_information.csv"
+    if os.path.exists(personal_info_path):
+        try:
+            with open(personal_info_path, 'r', encoding='utf-8', errors='ignore') as f:
+                p_reader = csv.DictReader(f)
+                for row in p_reader:
+                    pid = row.get('ID', '').strip()
+                    escuela = row.get('escuela', '').strip()
+                    if pid:
+                        personal_info[pid] = escuela if escuela and escuela != "#N/A" else "Visitante / Externo"
+            print(f"Información de personal cargada: {len(personal_info)} registros.")
+        except Exception as e:
+            print(f"Advertencia: No se pudo cargar {personal_info_path}: {e}")
+    else:
+        print(f"Advertencia: No se encontró {personal_info_path}. Se usará el departamento original.")
+
     # Mapeo de carriles
-    # Carril 01
-    # INGRESO: Carril 01-REC. FACIAL INGRESO 01, Carril 01-Cardreader 01
-    # SALIDA: Carril 01-REC. FACIAL SALIDA 01, Carril 01-Cardreader 02
-    # Carril 02
-    # INGRESO: Carril 02-REC. FACIAL INGRESO 02, Carril 02-Cardreader 01
-    # SALIDA: Carril 02-REC. FACIAL SALIDA 02, Carril 02-Cardreader 02
-    
     mapping = {
         "Carril 01-REC. FACIAL INGRESO 01": ("01", "INGRESO"),
         "Carril 01-Cardreader 01": ("01", "INGRESO"),
@@ -80,11 +89,16 @@ def process_hikvision(file_path):
                 # Intentar otros formatos si falla
                 continue
 
+            # Cruzar con información académica
+            person_id = row.get('ID', '').strip()
+            # Si el ID está en personal_info, usamos la escuela. Si no, usamos el departamento del CSV original.
+            departamento_final = personal_info.get(person_id, row.get('Departamento', '').strip())
+
             processed_data.append({
                 "Nombre": row.get('Nombre', '').strip(),
                 "Apellido": row.get('Apellido', '').strip(),
-                "ID": row.get('ID', '').strip(),
-                "Departamento": row.get('Departamento', '').strip(),
+                "ID": person_id,
+                "Departamento": departamento_final,
                 "Fecha": dt.strftime("%Y-%m-%d"),
                 "Hora": dt.strftime("%H:%M:%S"),
                 "DateTime": dt,

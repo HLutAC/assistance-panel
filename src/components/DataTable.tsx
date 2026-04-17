@@ -37,7 +37,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
   // Filtrado
   const filteredData = useMemo(() => {
     return data.filter(p => {
-      const searchStr = `${p.Nombre} ${p.Apellido} ${p.ID}`.toLowerCase();
+      const searchStr = `${p.Nombre} ${p.Apellido} ${p.ID} ${p.Departamento}`.toLowerCase();
       return searchStr.includes(searchTerm.toLowerCase());
     });
   }, [data, searchTerm]);
@@ -69,7 +69,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
           <input
             type="text"
-            placeholder="Buscar por nombre o ID..."
+            placeholder="Buscar por colaborador, ID o escuela..."
             value={searchTerm}
             onChange={handleSearch}
             className="w-full pl-10 pr-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
@@ -94,7 +94,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
             <thead className="sticky top-0 z-10">
               <tr className="bg-zinc-50 border-b border-zinc-200">
                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500">Colaborador</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500">ID / Departamento</th>
+                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500">ID / Escuela</th>
                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500 text-center">Frecuencia</th>
                 <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-500">Fechas con Actividad</th>
               </tr>
