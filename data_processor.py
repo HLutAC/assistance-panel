@@ -13,11 +13,13 @@ load_dotenv()
 
 def get_db_connection():
     try:
+        # Usar ruta absoluta dinámica para el socket de PG
+        default_host = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".pgdata/tmp")
         conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "smartaccess_db"),
-            user=os.getenv("DB_USER", "lut-bazzite"),
+            user=os.getenv("DB_USER", "admin"),
             password=os.getenv("DB_PASSWORD", ""),
-            host=os.getenv("DB_HOST", "/home/lut-bazzite/Escritorio/Fortinet/informes/.pgdata/tmp"),
+            host=os.getenv("DB_HOST", default_host),
             port=os.getenv("DB_PORT", "5433")
         )
         return conn
