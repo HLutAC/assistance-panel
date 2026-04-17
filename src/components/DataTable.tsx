@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 
 interface Evento {
   Hora: string;
@@ -22,14 +22,16 @@ interface DataTableProps {
 const DataTable: React.FC<DataTableProps> = ({ data }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(10);
   const [expandedDate, setExpandedDate] = useState<{ [personId: string]: string | null }>({});
+  const [openDateMenu, setOpenDateMenu] = useState<string | null>(null);
 
   const toggleDate = (personId: string, date: string) => {
     setExpandedDate(prev => ({
       ...prev,
       [personId]: prev[personId] === date ? null : date
     }));
+    setOpenDateMenu(null);
   };
 
   // Filtrado
@@ -123,8 +125,8 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1.5 max-w-sm">
-                          {dates.slice(0, 3).map((date) => (
+                        <div className="flex flex-wrap gap-1.5 max-w-sm items-center">
+                          {dates.slice(0, 2).map((date) => (
                             <button 
                               key={date}
                               onClick={() => toggleDate(row.ID, date)}
@@ -137,10 +139,37 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
                               {date.split('-').slice(1).reverse().join('/')}
                             </button>
                           ))}
-                          {dates.length > 3 && (
-                            <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-lg border border-zinc-200">
-                              +{dates.length - 3} días
-                            </span>
+                          
+                          {dates.length > 2 && (
+                            <div className="relative">
+                              <button 
+                                onClick={() => setOpenDateMenu(openDateMenu === row.ID ? null : row.ID)}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all hover:bg-zinc-50 ${
+                                  openDateMenu === row.ID ? 'bg-zinc-100 border-zinc-400 text-zinc-900' : 'bg-white text-zinc-400 border-zinc-200'
+                                }`}
+                              >
+                                {openDateMenu === row.ID ? 'Cerrar' : `+${dates.length - 2} días`}
+                                <ChevronDown size={12} className={`transition-transform duration-200 ${openDateMenu === row.ID ? 'rotate-180' : ''}`} />
+                              </button>
+
+                              {openDateMenu === row.ID && (
+                                <div className="absolute left-0 mt-2 w-48 bg-white border border-zinc-200 rounded-xl shadow-2xl z-50 p-2 grid grid-cols-2 gap-1 animate-in fade-in zoom-in-95 duration-200">
+                                  {dates.slice(2).map((date) => (
+                                    <button
+                                      key={date}
+                                      onClick={() => toggleDate(row.ID, date)}
+                                      className={`text-[9px] font-bold px-2 py-1.5 rounded-lg border transition-colors flex items-center justify-between ${
+                                        expandedDate[row.ID] === date
+                                          ? 'bg-zinc-900 text-white border-zinc-900'
+                                          : 'bg-zinc-50 text-zinc-600 border-transparent hover:bg-zinc-100'
+                                      }`}
+                                    >
+                                      {date.split('-').slice(1).reverse().join('/')}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
