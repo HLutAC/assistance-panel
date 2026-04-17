@@ -3,20 +3,24 @@ import { TrendingUp, TrendingDown, Users, LogIn, LogOut, UserCheck } from 'lucid
 
 interface KPIStatsProps {
   summary: {
-    total_clean: number;
+    total_raw?: number;
+    total_clean?: number;
     ingresos: number;
     salidas: number;
     usuarios_unicos: number;
-    eliminados: number;
-  };
+    eliminados?: number;
+  } | null;
 }
 
 const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
+  if (!summary) return null;
+  
+  const total = summary.total_raw ?? summary.total_clean ?? 0;
   const stats = [
     {
       title: 'Tránsito Total',
-      value: summary.total_clean.toLocaleString(),
-      trend: `+${((summary.total_clean / 30) | 0)}/día`,
+      value: total.toLocaleString(),
+      trend: `+${((total / 30) | 0)}/día`,
       trendPositive: true,
       icon: Users,
       color: 'text-indigo-600',

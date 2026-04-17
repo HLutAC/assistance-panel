@@ -20,9 +20,20 @@ const COLORS = ['#09090b', '#71717a', '#a1a1aa', '#d4d4d8', '#e4e4e7'];
 const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
   const [sequenceSearch, setSequenceSearch] = useState('');
 
+  // Asegurar que charts y sus miembros existan para evitar bloqueos
+  const safeCharts = useMemo(() => ({
+    hourly: charts?.hourly || [],
+    lane: charts?.lane || [],
+    pie: charts?.pie || [],
+    heatmap: charts?.heatmap || [],
+    sequence: charts?.sequence || []
+  }), [charts]);
+
   // Lógica para el Heatmap (Grid real)
   const heatmapGrid = useMemo(() => {
-    const dates = Array.from(new Set(charts.heatmap.map(d => d.fecha))).sort((a, b) => {
+    if (!safeCharts.heatmap.length) return [];
+    
+    const dates = Array.from(new Set(safeCharts.heatmap.map(d => d.fecha))).sort((a, b) => {
         // Ordenar fechas (asumiendo DD/MM)
         const [da, ma] = a.split('/').map(Number);
         const [db, mb] = b.split('/').map(Number);
@@ -31,7 +42,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
     
     return dates.map(fecha => {
       const hours = Array(24).fill(0);
-      charts.heatmap
+      safeCharts.heatmap
         .filter(d => d.fecha === fecha)
         .forEach(d => {
           hours[d.hora] = d.value;
@@ -40,16 +51,16 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
     });
   }, [charts.heatmap]);
 
-  const maxHeatValue = Math.max(...charts.heatmap.map(d => d.value), 1);
+  const maxHeatValue = Math.max(...safeCharts.heatmap.map(d => d.value), 1);
 
   // Filtrado de secuencias
   const filteredSequences = useMemo(() => {
-    if (!sequenceSearch) return charts.sequence;
+    if (!sequenceSearch) return safeCharts.sequence;
     const term = sequenceSearch.toLowerCase();
-    return charts.sequence.filter(s => 
+    return safeCharts.sequence.filter(s => 
       s.nombre.toLowerCase().includes(term) || s.id.toLowerCase().includes(term)
     );
-  }, [charts.sequence, sequenceSearch]);
+  }, [safeCharts.sequence, sequenceSearch]);
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out pb-20">
@@ -97,13 +108,13 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={charts.pie}
+                  data={safeCharts.pie}
                   innerRadius={60}
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {charts.pie.map((_, index) => (
+                  {safeCharts.pie.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
