@@ -219,6 +219,62 @@ def process_hikvision(file_path):
         # Convertir a lista y ordenar por nombre
         people_list = sorted(people_map.values(), key=lambda x: (x['Nombre'], x['Apellido']))
 
+        # --- Agregaciones para Gráficos ---
+        
+        # 1. Flujo por hora (0-23)
+        hourly_map = {h: {"hora": f"{h:02d}:00", "ingresos": 0, "salidas": 0} for h in range(24)}
+        for r in clean_data:
+            h = r['DateTime'].hour
+            if r['Tipo de movimiento'] == 'INGRESO':
+                hourly_map[h]["ingresos"] += 1
+            else:
+                hourly_map[h]["salidas"] += 1
+        hourly_chart = [hourly_map[h] for h in range(24)]
+
+        # 2. Uso por carril
+        lane_chart = []
+        for c in carriles:
+            if c == 'Desconocido': continue
+            lane_chart.append({
+                "name": f"Carril {c}",
+                "ingresos": len([r for r in clean_data if r['Carril'] == c and r['Tipo de movimiento'] == 'INGRESO']),
+                "salidas": len([r for r in clean_data if r['Carril'] == c and r['Tipo de movimiento'] == 'SALIDA'])
+            })
+
+        # 3. Comparación Ingress vs Egress (Pie)
+        pie_chart = [
+            {"name": "Ingresos", "value": ingresos},
+            {"name": "Salidas", "value": salidas}
+        ]
+
+        # 4. Heatmap (Hora vs Fecha)
+        heatmap_raw = {} # (fecha, hora) -> count
+        for r in clean_data:
+            key = (r['Fecha'], r['DateTime'].hour)
+            heatmap_raw[key] = heatmap_raw.get(key, 0) + 1
+        
+        heatmap_chart = []
+        for (fecha, hora), count in heatmap_raw.items():
+            # Formatear fecha para legibilidad (DD/MM)
+            f_display = "/".join(fecha.split("-")[1:][::-1])
+            heatmap_chart.append({"fecha": f_display, "hora": hora, "value": count})
+
+        # 5. Secuencia Temporal (Top 10 Usuarios)
+        sequence_chart = []
+        for uid, name in list(user_names.items())[:10]:
+            user_events = [r for r in clean_data if r['ID'] == uid]
+            sequence_chart.append({
+                "id": uid,
+                "nombre": name,
+                "eventos": [
+                    {
+                        "t": r['DateTime'].strftime("%Y-%m-%d %H:%M:%S"),
+                        "tipo": 1 if r['Tipo de movimiento'] == 'INGRESO' else -1,
+                        "label": r['Tipo de movimiento']
+                    } for r in user_events
+                ]
+            })
+
         # Guardar resultados en JSON para el Dashboard
         dashboard_data = {
             "summary": {
@@ -229,19 +285,14 @@ def process_hikvision(file_path):
                 "usuarios_unicos": usuarios_unicos,
                 "eliminados": total_raw - total_clean
             },
-            "carriles": {
-                c: {
-                    "ingresos": len([r for r in clean_data if r['Carril'] == c and r['Tipo de movimiento'] == 'INGRESO']),
-                    "salidas": len([r for r in clean_data if r['Carril'] == c and r['Tipo de movimiento'] == 'SALIDA'])
-                } for c in carriles
+            "charts": {
+                "hourly": hourly_chart,
+                "lane": lane_chart,
+                "pie": pie_chart,
+                "heatmap": heatmap_chart,
+                "sequence": sequence_chart
             },
-            "horas_pico": [
-                {"hora": f"{h:02d}:00", "cantidad": count} for h, count in sorted_horas[:8]
-            ],
-            "top_users": [
-                {"nombre": user_names[uid], "id": uid, "cantidad": count} for uid, count in top_users[:10]
-            ],
-            "personas": people_list # Enviamos toda la lista de personas con sus eventos
+            "personas": people_list 
         }
 
         import json

@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import KPIStats from './components/KPIStats';
 import DataTable from './components/DataTable';
+import AnalyticsView from './components/AnalyticsView';
 import dashboardDataRaw from './data/dashboard_data.json';
 
 const dashboardData = dashboardDataRaw as any;
@@ -79,6 +80,8 @@ const App: React.FC = () => {
                   <DataTable data={dashboardData.personas} />
                 </div>
               </div>
+            ) : activeTab === 'graficos' ? (
+              <AnalyticsView charts={dashboardData.charts} />
             ) : (
               <div className="premium-card p-24 text-center">
                 <div className="mx-auto w-24 h-24 bg-zinc-50 border border-zinc-100 rounded-3xl flex items-center justify-center text-zinc-300 mb-8 soft-shadow">
