@@ -1,46 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import KPIStats from './components/KPIStats';
 import DataTable from './components/DataTable';
 import AnalyticsView from './components/AnalyticsView';
-import dashboardDataRaw from './data/dashboard_data.json';
 
-const dashboardData = dashboardDataRaw as any;
+const API_BASE = "http://localhost:8000/api";
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('resumen');
-  
-  // Obtener fecha actual en formato YYYY-MM-DD
-  // Usamos una fecha del dataset para la demo (2026-04-17)
-  const today = '2026-04-17';
+  const [summary, setSummary] = useState<any>(null);
+  const [personas, setPersonas] = useState<any>([]);
+  const [charts, setCharts] = useState<any>({ hourly: [], lane: [], pie: [], heatmap: [], sequence: [] });
+  const [loading, setLoading] = useState(true);
 
-  // Lógica para calcular métricas del día de hoy
-  const dailySummary = React.useMemo(() => {
-    let ingresos = 0;
-    let salidas = 0;
-    const uniqueUsers = new Set();
-    
-    dashboardData.personas.forEach((p: any) => {
-      const dailyEvents = p.EventosPorFecha[today];
-      if (dailyEvents) {
-        uniqueUsers.add(p.ID);
-        dailyEvents.forEach((e: any) => {
-          if (e.Movimiento === 'INGRESO') ingresos++;
-          else if (e.Movimiento === 'SALIDA') salidas++;
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [summaryRes, personasRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
+          fetch(`${API_BASE}/summary`),
+          fetch(`${API_BASE}/personas?size=50`),
+          fetch(`${API_BASE}/charts/hourly`),
+          fetch(`${API_BASE}/charts/lane`),
+          fetch(`${API_BASE}/charts/heatmap`),
+          fetch(`${API_BASE}/charts/sequence`)
+        ]);
+
+        const summaryData = await summaryRes.json();
+        const personasData = await personasRes.json();
+        
+        setSummary(summaryData);
+        setPersonas(personasData.items);
+        setCharts({
+          hourly: await hourlyRes.json(),
+          lane: await laneRes.json(),
+          pie: [
+            { name: "Ingresos", value: summaryData.ingresos },
+            { name: "Salidas", value: summaryData.salidas }
+          ],
+          heatmap: await heatmapRes.json(),
+          sequence: await sequenceRes.json()
         });
+      } catch (error) {
+        console.error("Error fetching data from API:", error);
+      } finally {
+        setLoading(false);
       }
-    });
-
-    return {
-      total_raw: ingresos + salidas,
-      total_clean: ingresos + salidas,
-      ingresos,
-      salidas,
-      usuarios_unicos: uniqueUsers.size,
-      eliminados: 0
     };
-  }, [today]);
+
+    fetchData();
+  }, [activeTab]);
+
+  if (loading && !summary) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-zinc-950 selection:bg-primary-500/10">
@@ -64,7 +82,7 @@ const App: React.FC = () => {
                 {activeTab === 'configuracion' && 'Ajustes del Sistema'}
               </h1>
               <p className="text-zinc-500 text-lg font-medium max-w-2xl leading-relaxed">
-                Plataforma de visualización de datos de alta precisión para la gestión de informes operativos y métricas críticas.
+                Plataforma de visualización de datos de alta precisión respaldada por PostgreSQL para la gestión de informes operativos.
               </p>
             </div>
 
@@ -72,31 +90,31 @@ const App: React.FC = () => {
             {activeTab === 'resumen' ? (
               <div className="animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out">
                 <div className="mb-4">
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Métricas del Día {today.split('-').reverse().join('/')}</h2>
-                  <KPIStats summary={dailySummary} />
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Métricas Globales (Histórico)</h2>
+                  <KPIStats summary={summary} />
                 </div>
                 <div>
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos (Deduplicado)</h2>
-                  <DataTable data={dashboardData.personas} />
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos Recientes</h2>
+                  <DataTable data={personas} />
                 </div>
               </div>
             ) : activeTab === 'registros' ? (
               <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out">
                 <div className="mb-4">
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos (Sin Procesar)</h2>
-                  <DataTable data={dashboardData.bitacora} />
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos desde PostgreSQL</h2>
+                  <DataTable data={personas} />
                 </div>
               </div>
             ) : activeTab === 'graficos' ? (
-              <AnalyticsView charts={dashboardData.charts} />
+              <AnalyticsView charts={charts} />
             ) : (
               <div className="premium-card p-24 text-center">
                 <div className="mx-auto w-24 h-24 bg-zinc-50 border border-zinc-100 rounded-3xl flex items-center justify-center text-zinc-300 mb-8 soft-shadow">
                   <span className="text-4xl animate-pulse font-black italic">...</span>
                 </div>
-                <h3 className="text-3xl font-black text-zinc-950 tracking-tight">Módulo en Desarrollo</h3>
+                <h3 className="text-3xl font-black text-zinc-950 tracking-tight">PostgreSQL Backend</h3>
                 <p className="text-zinc-500 mt-4 max-w-md mx-auto text-lg font-medium leading-relaxed">
-                  Esta sección está siendo optimizada para ofrecerle una experiencia analítica superior.
+                  Sistema conectado exitosamente. Los datos se sirven ahora de forma dinámica desde el servidor administrado.
                 </p>
               </div>
             )}
@@ -106,7 +124,7 @@ const App: React.FC = () => {
               <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
                 <span>Generado el: {new Date().toLocaleString()}</span>
                 <span>Página 1 de 1</span>
-                <span>Admin Dashboard Suite v3.0.0</span>
+                <span>SmartAccess Dashboard Suite v4.0.0 (PG)</span>
               </div>
             </div>
           </div>
