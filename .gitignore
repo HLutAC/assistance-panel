@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Data & Sensitive Info
+*.csv
+reporte_hikvision.md
+src/data/dashboard_data.json
+transacciones_limpias.csv
+
+# Build results
+build.log
