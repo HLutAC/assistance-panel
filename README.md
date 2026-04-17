@@ -1,73 +1,54 @@
-# React + TypeScript + Vite
+# Assistance Panel - Hikvision Reporting Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Un panel de control de alto rendimiento diseñado para transformar los logs crudos de tránsito de Hikvision en inteligencia institucional accionable. Construido con una estética **Cloud Premium** y una arquitectura de seguridad descentralizada.
 
-Currently, two official plugins are available:
+## ✨ Características Principales
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **KPIs en Tiempo Real**: Resumen dinámico de ingresos, salidas y usuarios únicos del día actual.
+- **Analítica Avanzada**: 5 gráficos interactivos (Flujo horario, Uso de carriles, Heatmap temporal, Distribución global y Secuencias cronológicas).
+- **Integración Académica**: Cruce automático con `Personal_information.csv` para mostrar la Escuela/Carrera de cada colaborador.
+- **Historial Interactivo**: Navegación por fechas históricas con expansión de movimientos detallada.
+- **Modo Impresión**: Optimizado para reportes en blanco y negro de alta legibilidad.
 
-## React Compiler
+## 🏗️ Arquitectura del Sistema
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+El proyecto se divide en dos capas principales:
 
-## Expanding the ESLint configuration
+1. **Procesador de Datos (Python)**: Limpia, deduplica (ventana de 5 min) y enriquece los datos crudos de los CSVs de Hikvision.
+2. **Dashboard Frontend (React + TS + Vite)**: Una interfaz fluida y data-dense que visualiza los resultados procesados.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🔒 Seguridad y Configuración
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Toda la información institucional sensible está externalizada y protegida por `.gitignore`:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **`.env`**: Define las rutas de los archivos CSV de transacciones y personal.
+- **`config.json`**: Contiene el mapeo técnico de los carriles y puntos de control.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 🚀 Guía de Inicio Rápido
+
+### 1. Procesamiento de Datos
+Asegúrate de tener tus archivos CSV en la ruta especificada en el `.env` y ejecuta:
+```bash
+python3 data_processor.py
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Ejecución del Dashboard (Modo Desarrollo)
+Instala las dependencias y arranca el servidor Vite:
+```bash
+npm install
+npm run dev
 ```
+
+### 3. Construcción para Producción
+Genera los assets optimizados en la carpeta `dist`:
+```bash
+npm run build
+```
+
+## 🛠️ Stack Tecnológico
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Lucide React.
+- **Visualización**: Recharts.
+- **Backend**: Python 3.
+
+---
+© 2026 National University of Moquegua - OTI
