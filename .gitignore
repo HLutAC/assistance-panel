@@ -18,6 +18,8 @@ transacciones_limpias.csv
 venv/
 .pgdata/
 __pycache__/
+uploads/
+*.log
 
 # Framework "Noise" (Minimized Repo)
 package-lock.json
