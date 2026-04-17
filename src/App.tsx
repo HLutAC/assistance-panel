@@ -9,6 +9,37 @@ const dashboardData = dashboardDataRaw as any;
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('resumen');
+  
+  // Obtener fecha actual en formato YYYY-MM-DD
+  // Usamos una fecha del dataset para la demo (2026-04-17)
+  const today = '2026-04-17';
+
+  // Lógica para calcular métricas del día de hoy
+  const dailySummary = React.useMemo(() => {
+    let ingresos = 0;
+    let salidas = 0;
+    const uniqueUsers = new Set();
+    
+    dashboardData.personas.forEach((p: any) => {
+      const dailyEvents = p.EventosPorFecha[today];
+      if (dailyEvents) {
+        uniqueUsers.add(p.ID);
+        dailyEvents.forEach((e: any) => {
+          if (e.Movimiento === 'INGRESO') ingresos++;
+          else if (e.Movimiento === 'SALIDA') salidas++;
+        });
+      }
+    });
+
+    return {
+      total_raw: ingresos + salidas,
+      total_clean: ingresos + salidas,
+      ingresos,
+      salidas,
+      usuarios_unicos: uniqueUsers.size,
+      eliminados: 0
+    };
+  }, [today]);
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-zinc-950 selection:bg-primary-500/10">
@@ -40,8 +71,8 @@ const App: React.FC = () => {
             {activeTab === 'resumen' || activeTab === 'registros' ? (
               <div className="animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out">
                 <div className="mb-4">
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Métricas de Tránsito</h2>
-                  <KPIStats summary={dashboardData.summary} />
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Métricas del Día {today.split('-').reverse().join('/')}</h2>
+                  <KPIStats summary={dailySummary} />
                 </div>
                 <div>
                   <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos por Persona</h2>
