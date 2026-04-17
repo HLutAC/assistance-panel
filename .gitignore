@@ -6,8 +6,12 @@ dist-ssr
 
 # Data & Sensitive Info (CRITICAL)
 *.csv
-reporte_hikvision.md
+reporte_hikvision*.csv
 src/data/dashboard_data.json
+reporte_hikvision.md
+.env
+config.json
+es_limpias.csv
 transacciones_limpias.csv
 
 # Framework "Noise" (Minimized Repo)
@@ -16,6 +20,22 @@ eslint.config.js
 tsconfig.app.json
 tsconfig.node.json
 build.log
+
+### react ###
+.DS_*
+*.log
+logs
+**/*.backup.*
+**/*.back.*
+
+node_modules
+bower_components
+
+*.sublime*
+
+psd
+thumb
+sketch
 
 # Editor/OS artifacts
 .vscode/*
