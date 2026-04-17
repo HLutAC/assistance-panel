@@ -193,23 +193,29 @@ def process_data():
                 ]
             })
 
-        # Para la Bitácora Completa usamos processed_data (SIN FILTRAR)
-        people_map = {}
-        for r in processed_data:
-            uid = r['ID']
-            if uid not in people_map:
-                people_map[uid] = {
-                    "Nombre": r["Nombre"], "Apellido": r["Apellido"], "ID": r["ID"],
-                    "Departamento": r["Departamento"], "EventosPorFecha": {}
-                }
-            fecha = r['Fecha']
-            if fecha not in people_map[uid]["EventosPorFecha"]:
-                people_map[uid]["EventosPorFecha"][fecha] = []
-            people_map[uid]["EventosPorFecha"][fecha].append({
-                "Hora": r["Hora"], "Movimiento": r["Tipo de movimiento"], "Carril": r["Carril"]
-            })
+        # Función auxiliar para mapear personas
+        def map_people(source_data):
+            p_map = {}
+            for r in source_data:
+                uid = r['ID']
+                if uid not in p_map:
+                    p_map[uid] = {
+                        "Nombre": r["Nombre"], "Apellido": r["Apellido"], "ID": r["ID"],
+                        "Departamento": r["Departamento"], "EventosPorFecha": {}
+                    }
+                fecha = r['Fecha']
+                if fecha not in p_map[uid]["EventosPorFecha"]:
+                    p_map[uid]["EventosPorFecha"][fecha] = []
+                p_map[uid]["EventosPorFecha"][fecha].append({
+                    "Hora": r["Hora"], "Movimiento": r["Tipo de movimiento"], "Carril": r["Carril"]
+                })
+            return sorted(p_map.values(), key=lambda x: (x['Nombre'], x['Apellido']))
 
-        people_list = sorted(people_map.values(), key=lambda x: (x['Nombre'], x['Apellido']))
+        # personas: para Resumen (LIMPIO)
+        people_clean_list = map_people(clean_data)
+        
+        # bitacora: para Bitácora Completa (SIN FILTRAR)
+        people_raw_list = map_people(processed_data)
 
         dashboard_data = {
             "summary": {
@@ -221,7 +227,8 @@ def process_data():
                 "hourly": hourly_chart, "lane": lane_chart, "pie": pie_chart,
                 "heatmap": heatmap_chart, "sequence": sequence_chart
             },
-            "personas": people_list 
+            "personas": people_clean_list,
+            "bitacora": people_raw_list
         }
 
         output_json = 'src/data/dashboard_data.json'

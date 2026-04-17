@@ -69,15 +69,22 @@ const App: React.FC = () => {
             </div>
 
             {/* Content Switcher based on tab */}
-            {activeTab === 'resumen' || activeTab === 'registros' ? (
+            {activeTab === 'resumen' ? (
               <div className="animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out">
                 <div className="mb-4">
                   <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Métricas del Día {today.split('-').reverse().join('/')}</h2>
                   <KPIStats summary={dailySummary} />
                 </div>
                 <div>
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos por Persona</h2>
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos (Deduplicado)</h2>
                   <DataTable data={dashboardData.personas} />
+                </div>
+              </div>
+            ) : activeTab === 'registros' ? (
+              <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out">
+                <div className="mb-4">
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos (Sin Procesar)</h2>
+                  <DataTable data={dashboardData.bitacora} />
                 </div>
               </div>
             ) : activeTab === 'graficos' ? (
