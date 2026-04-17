@@ -118,6 +118,7 @@ def process_data():
 
         processed_data.sort(key=lambda x: (x['ID'], x['DateTime']))
 
+        # clean_data para estadísticas y gráficos (con filtro de 5 min)
         clean_data = []
         if processed_data:
             current_group = [processed_data[0]]
@@ -192,8 +193,9 @@ def process_data():
                 ]
             })
 
+        # Para la Bitácora Completa usamos processed_data (SIN FILTRAR)
         people_map = {}
-        for r in clean_data:
+        for r in processed_data:
             uid = r['ID']
             if uid not in people_map:
                 people_map[uid] = {

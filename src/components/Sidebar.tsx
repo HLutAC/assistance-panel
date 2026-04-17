@@ -11,7 +11,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
 
   const menuItems = [
     { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
-    { id: 'registros', label: 'Registros Detallados', icon: FileText },
+    { id: 'registros', label: 'Bitácora Completa', icon: FileText },
     { id: 'graficos', label: 'Gráficos', icon: BarChart3 },
     { id: 'configuracion', label: 'Configuración', icon: Settings },
   ];
@@ -25,10 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       <div className="p-6 flex items-center justify-between">
         {!collapsed && (
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center shadow-lg shadow-zinc-950/20 text-white font-black text-xl leading-none">
-              R
-            </div>
-            <span className="font-bold text-xl text-zinc-950 tracking-tight">Admin<span className="text-primary-500">Panel</span></span>
+            <span className="font-bold text-xl text-zinc-950 tracking-tight">Smart<span className="text-primary-500">Access</span></span>
           </div>
         )}
         <button 

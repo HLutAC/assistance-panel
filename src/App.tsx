@@ -59,7 +59,7 @@ const App: React.FC = () => {
               </div>
               <h1 className="text-5xl font-black text-zinc-950 tracking-tighter mb-4 leading-tight">
                 {activeTab === 'resumen' && 'Resumen Ejecutivo'}
-                {activeTab === 'registros' && 'Registros Detallados'}
+                {activeTab === 'registros' && 'Bitácora Completa'}
                 {activeTab === 'graficos' && 'Análisis de Datos'}
                 {activeTab === 'configuracion' && 'Ajustes del Sistema'}
               </h1>
