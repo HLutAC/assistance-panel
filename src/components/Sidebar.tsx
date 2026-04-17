@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, FileText, BarChart3, Settings, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, BarChart3, Settings, ChevronLeft, ChevronRight, LogOut, Upload } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -13,6 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
     { id: 'registros', label: 'Bitácora Completa', icon: FileText },
     { id: 'graficos', label: 'Gráficos', icon: BarChart3 },
+    { id: 'importar', label: 'Importar Datos', icon: Upload },
     { id: 'configuracion', label: 'Configuración', icon: Settings },
   ];
 

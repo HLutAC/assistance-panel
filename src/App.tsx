@@ -4,6 +4,7 @@ import Header from './components/Header';
 import KPIStats from './components/KPIStats';
 import DataTable from './components/DataTable';
 import AnalyticsView from './components/AnalyticsView';
+import ImportView from './components/ImportView';
 
 const API_BASE = "http://localhost:8000/api";
 
@@ -79,6 +80,7 @@ const App: React.FC = () => {
                 {activeTab === 'resumen' && 'Resumen Ejecutivo'}
                 {activeTab === 'registros' && 'Bitácora Completa'}
                 {activeTab === 'graficos' && 'Análisis de Datos'}
+                {activeTab === 'importar' && 'Centro de Ingesta'}
                 {activeTab === 'configuracion' && 'Ajustes del Sistema'}
               </h1>
               <p className="text-zinc-500 text-lg font-medium max-w-2xl leading-relaxed">
@@ -107,6 +109,8 @@ const App: React.FC = () => {
               </div>
             ) : activeTab === 'graficos' ? (
               <AnalyticsView charts={charts} />
+            ) : activeTab === 'importar' ? (
+              <ImportView />
             ) : (
               <div className="premium-card p-24 text-center">
                 <div className="mx-auto w-24 h-24 bg-zinc-50 border border-zinc-100 rounded-3xl flex items-center justify-center text-zinc-300 mb-8 soft-shadow">

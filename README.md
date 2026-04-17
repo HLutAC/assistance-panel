@@ -44,8 +44,13 @@ Asegúrate de tener los archivos `.env` y `config.json` configurados en la raíz
 
 ## Uso Operativo
 
-### Paso 1: Procesar nuevos datos
-Coloca tus archivos `Transacciones_*.csv` en la raíz y sincroniza la base de datos:
+### Método A: Ingesta desde el Dashboard (Recomendado)
+1. Ve a la pestaña **"Importar Datos"**.
+2. Arrastra tu archivo `Transacciones_*.csv` o selecciónalo desde tu equipo.
+3. Haz clic en **"Iniciar Sincronización"**. El sistema actualizará PostgreSQL al instante.
+
+### Método B: Ingesta Manual (Terminal)
+Coloca tus archivos `Transacciones_*.csv` en la raíz y ejecuta:
 ```bash
 ./venv/bin/python data_processor.py
 ```
