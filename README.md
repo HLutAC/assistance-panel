@@ -50,11 +50,11 @@ Asegúrate de configurar estos archivos antes de ejecutar el proyecto.
 ## Uso
 
 ### 1. Procesar los datos
-Coloca los archivos CSV en las rutas definidas y ejecuta el script de procesamiento:
+El sistema cuenta con **Descubrimiento Automático**. Basta con colocar el archivo exportado (ej: `Transacciones_2026-04-30.csv`) en la carpeta raíz y ejecutar:
 ```bash
 python3 data_processor.py
 ```
-Esto generará el dataset limpio necesario para alimentar el dashboard.
+El script detectará automáticamente el archivo más reciente basándose en el nombre y la fecha de modificación, eliminando la necesidad de configurar manualmente el nombre en el `.env`.
 
 ### 2. Ejecutar el dashboard (desarrollo)
 Para iniciar el entorno de desarrollo:

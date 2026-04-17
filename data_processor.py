@@ -3,26 +3,57 @@ import sys
 from datetime import datetime, timedelta
 import os
 import json
+import glob
 
 def load_env(file_path=".env"):
     env_vars = {}
     if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 if "=" in line and not line.startswith("#"):
                     key, value = line.strip().split("=", 1)
                     env_vars[key] = value
     return env_vars
 
+def find_latest_csv(pattern="Transacciones_*.csv"):
+    """
+    Busca el archivo CSV más reciente que coincida con el patrón.
+    Prioriza el orden alfabético (útil para nombres con fechas YYYY-MM-DD).
+    """
+    files = glob.glob(pattern)
+    if not files:
+        # Intentar buscar en subdirectorios nivel 1 si no hay en el actual
+        files = glob.glob(f"*/{pattern}")
+    
+    if not files:
+        return None
+    
+    # Ordenar por nombre descendente (asumiendo formato de fecha ISO)
+    # y por fecha de modificación como fallback
+    files.sort(key=lambda x: (os.path.basename(x), os.path.getmtime(x)), reverse=True)
+    return files[0]
+
 def process_data():
     # Cargar variables de entorno
     env = load_env()
-    file_path = env.get("TRANSACTIONS_CSV", "Transacciones.csv")
-    personal_info_path = env.get("PERSONAL_INFO_CSV", "Personal_information.csv")
+    
+    # Descubrimiento dinámico de archivo de transacciones
+    env_file_path = env.get("TRANSACTIONS_CSV")
+    if env_file_path and os.path.exists(env_file_path):
+        file_path = env_file_path
+        print(f"Usando archivo definido en .env: {file_path}")
+    else:
+        file_path = find_latest_csv()
+        if not file_path:
+            # Fallback legacy
+            if os.path.exists("Transacciones.csv"):
+                file_path = "Transacciones.csv"
+            else:
+                print("Error: No se encontró ningún archivo de transacciones (Transacciones_*.csv).")
+                return
+        print(f"Archivo detectado automáticamente: {file_path}")
 
-    if not os.path.exists(file_path):
-        print(f"Error: El archivo {file_path} no existe.")
-        return
+    personal_info_path = env.get("PERSONAL_INFO_CSV", "Personal_information.csv")
 
     # Cargar configuración (Mapeo de carriles)
     config_path = "config.json"
@@ -30,14 +61,11 @@ def process_data():
     if os.path.exists(config_path):
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            # Convertir listas a tuplas para el mapeo
             mapping = {k: tuple(v) for k, v in config.get("mapping", {}).items()}
     else:
         print("Error: No se encontró config.json")
         return
 
-    print(f"Procesando archivo: {file_path}")
-    
     # Cargar información de personal (ID -> Escuela)
     personal_info = {}
     if os.path.exists(personal_info_path):
@@ -53,12 +81,10 @@ def process_data():
         except Exception as e:
             print(f"Advertencia: No se pudo cargar {personal_info_path}: {e}")
     else:
-        print(f"Advertencia: No se encontró {personal_info_path}. Se usará el departamento original.")
+        print(f"Advertencia: No se encontró {personal_info_path}.")
 
-    data = []
-    skipped_metadata = 0
-    
     try:
+        print(f"Leyendo datos de: {file_path}...")
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
             
@@ -69,7 +95,7 @@ def process_data():
                 break
         
         if header_index == -1:
-            print("Error: No se encontró la cabecera del CSV.")
+            print("Error: No se encontró la cabecera 'Nombre;' en el CSV.")
             return
 
         reader = csv.DictReader(lines[header_index:], delimiter=';')
@@ -80,7 +106,8 @@ def process_data():
         # Limpieza y Mapeo Inicial
         processed_data = []
         for row in raw_rows:
-            if not row.get('ID'): continue
+            person_id = row.get('ID', '').strip()
+            if not person_id: continue
             
             punto = row.get('Punto de control de asistencia', '').strip()
             carril, movimiento = mapping.get(punto, ("Desconocido", "Desconocido"))
@@ -92,14 +119,14 @@ def process_data():
 
             try:
                 dt_str = f"{fecha_str} {hora_str}"
-                if len(hora_str) == 5: # HH:MM
-                    dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
-                else: # HH:MM:SS
+                # Intentar HH:MM:SS then HH:MM
+                if len(hora_str) > 5:
                     dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+                else:
+                    dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
             except Exception:
                 continue
 
-            person_id = row.get('ID', '').strip()
             departamento_final = personal_info.get(person_id, row.get('Departamento', '').strip())
 
             processed_data.append({
@@ -111,14 +138,12 @@ def process_data():
                 "Hora": dt.strftime("%H:%M:%S"),
                 "DateTime": dt,
                 "Carril": carril,
-                "Tipo de movimiento": movimiento,
-                "Metodo": row.get('Método de verificación', '').strip(),
-                "PuntoOriginal": punto
+                "Tipo de movimiento": movimiento
             })
 
         processed_data.sort(key=lambda x: (x['ID'], x['DateTime']))
 
-        # clean_data para estadísticas y gráficos (con filtro de 5 min)
+        # clean_data para estadísticas y gráficos (deduplicado)
         clean_data = []
         if processed_data:
             current_group = [processed_data[0]]
@@ -133,12 +158,7 @@ def process_data():
                     current_group = [next_record]
             clean_data.append(current_group[-1])
 
-        total_clean = len(clean_data)
-        ingresos = len([r for r in clean_data if r['Tipo de movimiento'] == 'INGRESO'])
-        salidas = len([r for r in clean_data if r['Tipo de movimiento'] == 'SALIDA'])
-        usuarios_unicos = len(set(r['ID'] for r in clean_data))
-        
-        # Agregaciones para Gráficos
+        # Agregaciones: Hourly
         hourly_map = {h: {"hora": f"{h:02d}:00", "ingresos": 0, "salidas": 0} for h in range(24)}
         for r in clean_data:
             h = r['DateTime'].hour
@@ -148,42 +168,47 @@ def process_data():
                 hourly_map[h]["salidas"] += 1
         hourly_chart = [hourly_map[h] for h in range(24)]
 
-        carriles = sorted(set(r['Carril'] for r in clean_data))
-        lane_chart = []
-        for c in carriles:
+        # Agregaciones: Lane
+        lane_stats = {}
+        for r in clean_data:
+            c = r['Carril']
             if c == 'Desconocido': continue
-            lane_chart.append({
-                "name": f"Carril {c}",
-                "ingresos": len([r for r in clean_data if r['Carril'] == c and r['Tipo de movimiento'] == 'INGRESO']),
-                "salidas": len([r for r in clean_data if r['Carril'] == c and r['Tipo de movimiento'] == 'SALIDA'])
-            })
+            if c not in lane_stats: lane_stats[c] = {"ingresos": 0, "salidas": 0}
+            if r['Tipo de movimiento'] == 'INGRESO': lane_stats[c]["ingresos"] += 1
+            else: lane_stats[c]["salidas"] += 1
+        
+        lane_chart = []
+        for c in sorted(lane_stats.keys()):
+            lane_chart.append({"name": f"Carril {c}", **lane_stats[c]})
 
-        pie_chart = [{"name": "Ingresos", "value": ingresos}, {"name": "Salidas", "value": salidas}]
-
+        # Heatmap
         heatmap_raw = {}
         for r in clean_data:
             key = (r['Fecha'], r['DateTime'].hour)
             heatmap_raw[key] = heatmap_raw.get(key, 0) + 1
         
         heatmap_chart = []
-        for (fecha, hora), count in heatmap_raw.items():
+        # Solo mostrar los últimos 7 días con actividad para el heatmap
+        active_dates = sorted(set(fecha for fecha, _ in heatmap_raw.keys()), reverse=True)[:7]
+        for fecha in sorted(active_dates):
             f_display = "/".join(fecha.split("-")[1:][::-1])
-            heatmap_chart.append({"fecha": f_display, "hora": hora, "value": count})
+            for h in range(24):
+                count = heatmap_raw.get((fecha, h), 0)
+                heatmap_chart.append({"fecha": f_display, "hora": h, "value": count})
 
-        user_names = {}
+        # Top Usuarios para secuencia
+        user_total_events = {}
         for r in clean_data:
-            user_names[r['ID']] = f"{r['Nombre']} {r['Apellido']}"
-
+            user_total_events[r['ID']] = user_total_events.get(r['ID'], 0) + 1
+        
+        top_uids = sorted(user_total_events.items(), key=lambda x: x[1], reverse=True)[:10]
         sequence_chart = []
-        # Reporte
-        report = []
-        report.append("# Reporte Analítico de Tránsito")
-        report.append(f"\nGenerado el: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        for uid, name in list(user_names.items())[:10]:
+        for uid, _ in top_uids:
             user_events = [r for r in clean_data if r['ID'] == uid]
+            first_r = user_events[0]
             sequence_chart.append({
                 "id": uid,
-                "nombre": name,
+                "nombre": f"{first_r['Nombre']} {first_r['Apellido']}",
                 "eventos": [
                     {
                         "t": r['DateTime'].strftime("%Y-%m-%d %H:%M:%S"),
@@ -193,7 +218,6 @@ def process_data():
                 ]
             })
 
-        # Función auxiliar para mapear personas
         def map_people(source_data):
             p_map = {}
             for r in source_data:
@@ -211,38 +235,36 @@ def process_data():
                 })
             return sorted(p_map.values(), key=lambda x: (x['Nombre'], x['Apellido']))
 
-        # personas: para Resumen (LIMPIO)
-        people_clean_list = map_people(clean_data)
-        
-        # bitacora: para Bitácora Completa (SIN FILTRAR)
-        people_raw_list = map_people(processed_data)
-
         dashboard_data = {
             "summary": {
-                "total_raw": total_raw, "total_clean": total_clean, "ingresos": ingresos,
-                "salidas": salidas, "usuarios_unicos": usuarios_unicos,
-                "eliminados": total_raw - total_clean
+                "total_raw": total_raw, 
+                "total_clean": len(clean_data),
+                "ingresos": len([r for r in clean_data if r['Tipo de movimiento'] == 'INGRESO']),
+                "salidas": len([r for r in clean_data if r['Tipo de movimiento'] == 'SALIDA']),
+                "usuarios_unicos": len(set(r['ID'] for r in clean_data)),
+                "source_file": os.path.basename(file_path)
             },
             "charts": {
-                "hourly": hourly_chart, "lane": lane_chart, "pie": pie_chart,
+                "hourly": hourly_chart, "lane": lane_chart, 
+                "pie": [
+                    {"name": "Ingresos", "value": len([r for r in clean_data if r['Tipo de movimiento'] == 'INGRESO'])},
+                    {"name": "Salidas", "value": len([r for r in clean_data if r['Tipo de movimiento'] == 'SALIDA'])}
+                ],
                 "heatmap": heatmap_chart, "sequence": sequence_chart
             },
-            "personas": people_clean_list,
-            "bitacora": people_raw_list
+            "personas": map_people(clean_data),
+            "bitacora": map_people(processed_data)
         }
 
         output_json = 'src/data/dashboard_data.json'
         os.makedirs('src/data', exist_ok=True)
-        # Guardar resultados
-        with open('reporte_analitico.md', 'w', encoding='utf-8') as f:
-            f.write("\n".join(report))
         with open(output_json, 'w', encoding='utf-8') as f:
             json.dump(dashboard_data, f, ensure_ascii=False, indent=2)
 
-        print(f"Procesamiento completado con éxito. JSON generado en: {output_json}")
+        print(f"Éxito: JSON generado en {output_json} usando {file_path}")
 
     except Exception as e:
-        print(f"Error durante el procesamiento: {str(e)}")
+        print(f"Error crítico: {str(e)}")
 
 if __name__ == "__main__":
     process_data()
