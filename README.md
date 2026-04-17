@@ -1,54 +1,78 @@
 # Access Control & Reporting Dashboard
 
-Un panel de control de alto rendimiento diseñado para transformar los logs crudos de sistemas de acceso en inteligencia operativa accionable. Construido con una estética **Cloud Premium** y una arquitectura de seguridad descentralizada.
+Este proyecto permite transformar registros crudos de sistemas de control de acceso en información útil para el análisis operativo. Está diseñado para trabajar con datos exportados (CSV) de sistemas como Hikvision y convertirlos en visualizaciones claras y reportes utilizables.
 
-## ✨ Características Principales
+## Características principales
 
-- **KPIs en Tiempo Real**: Resumen dinámico de ingresos, salidas y usuarios únicos del día actual.
-- **Analítica Avanzada**: 5 gráficos interactivos (Flujo horario, Uso de dispositivos, Heatmap temporal, Distribución global y Secuencias cronológicas).
-- **Integración con Personal**: Cruce automático con bases de datos de personal para mostrar la afiliación/escuela de cada colaborador.
-- **Historial Interactivo**: Navegación por fechas históricas con expansión de movimientos detallada.
-- **Modo Impresión**: Optimizado para reportes en blanco y negro de alta legibilidad.
+### KPIs diarios
+Muestra un resumen rápido de ingresos, salidas y cantidad de personas únicas en el día seleccionado.
 
-## 🏗️ Arquitectura del Sistema
+### Visualización de datos
+Incluye gráficos orientados al análisis detallado:
+- **Flujo de personas por hora**: Identificación de horas pico.
+- **Uso de carriles/dispositivos**: Análisis de carga por punto de acceso.
+- **Heatmap de actividad (hora vs día)**: Relación entre frecuencia horaria y diaria.
+- **Distribución general de ingresos y salidas**: Balance de ingresos y salidas.
+- **Secuencia temporal de eventos por persona**: Registro cronológico de movimientos.
 
-El proyecto se divide en dos capas principales:
+### Funcionalidades adicionales
+- **Integración con datos de personal**: Cruce de registros con bases externas para identificar área, escuela o afiliación.
+- **Histórico navegable**: Consulta de fechas anteriores y revisión del detalle de movimientos.
+- **Modo impresión**: Vista simplificada diseñada para exportar o imprimir reportes de forma legible.
 
-1. **Procesador de Datos (Python)**: Limpia, deduplica (ventana de 5 min) y enriquece los datos crudos de las fuentes CSV.
-2. **Dashboard Frontend (React + TS + Vite)**: Una interfaz fluida y data-dense que visualiza los resultados procesados.
+---
 
-## 🔒 Seguridad y Configuración
+## Arquitectura
+El sistema está dividido en dos componentes principales:
 
-Toda la información sensible está externalizada y protegida por `.gitignore`:
+### 1. Procesamiento de datos (Python)
+Se encarga de la lógica de limpieza y estructuración:
+- Limpieza de datos crudos.
+- Eliminación de duplicados mediante una ventana de tiempo definida.
+- Estandarización de formatos de fecha y texto.
+- Enriquecimiento de la información (asignación de carril y tipo de movimiento).
 
-- **`.env`**: Define las rutas de los archivos CSV de transacciones y personal.
-- **`config.json`**: Contiene el mapeo técnico de los dispositivos y puntos de control.
+### 2. Dashboard (React + TypeScript + Vite)
+Interfaz de usuario que consume los datos procesados y los presenta mediante gráficos interactivos y tablas de análisis.
 
-## 🚀 Guía de Inicio Rápido
+---
 
-### 1. Procesamiento de Datos
-Asegúrate de tener tus archivos CSV en la ruta especificada en el `.env` y ejecuta:
+## Configuración
+Los archivos sensibles y configuraciones locales no están versionados en el repositorio:
+
+- **.env**: Define las rutas de entrada para los archivos CSV de transacciones y personal.
+- **config.json**: Contiene el mapeo de identificadores de dispositivos a nombres de carriles y tipos de movimiento.
+
+Asegúrate de configurar estos archivos antes de ejecutar el proyecto.
+
+---
+
+## Uso
+
+### 1. Procesar los datos
+Coloca los archivos CSV en las rutas definidas y ejecuta el script de procesamiento:
 ```bash
 python3 data_processor.py
 ```
+Esto generará el dataset limpio necesario para alimentar el dashboard.
 
-### 2. Ejecución del Dashboard (Modo Desarrollo)
-Instala las dependencias y arranca el servidor Vite:
+### 2. Ejecutar el dashboard (desarrollo)
+Para iniciar el entorno de desarrollo:
 ```bash
 npm install
 npm run dev
 ```
 
-### 3. Construcción para Producción
-Genera los assets optimizados en la carpeta `dist`:
+### 3. Construir para producción
+Para generar los archivos listos para despliegue:
 ```bash
 npm run build
 ```
-
-## 🛠️ Stack Tecnológico
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Lucide React.
-- **Visualización**: Recharts.
-- **Backend**: Python 3.
+Los archivos finales se ubicarán en la carpeta `dist`.
 
 ---
-© 2026 Admin Dashboard Suite - v3.0.0
+
+## Stack tecnológico
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS.
+- **Visualización**: Recharts.
+- **Procesamiento de datos**: Python 3 (Pandas).
