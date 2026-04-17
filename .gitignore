@@ -14,6 +14,11 @@ config.json
 es_limpias.csv
 transacciones_limpias.csv
 
+# Python & DB
+venv/
+.pgdata/
+__pycache__/
+
 # Framework "Noise" (Minimized Repo)
 package-lock.json
 eslint.config.js
