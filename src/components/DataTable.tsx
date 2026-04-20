@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, Filter, X, Hash } from 'lucide-react';
 
 interface Evento {
   Hora: string;
@@ -24,12 +24,20 @@ interface DataTableProps {
   onSearch?: (term: string) => void;
   pageSize?: number;
   onSizeChange?: (size: number) => void;
+  escuela?: string;
+  onEscuelaChange?: (escuela: string) => void;
+  personId?: string;
+  onPersonIdChange?: (id: string) => void;
+  escuelas?: string[];
 }
 
 const DataTable: React.FC<DataTableProps> = ({ 
   data, page = 1, setPage, total = 0, 
   searchTerm = '', onSearch, 
-  pageSize = 50, onSizeChange 
+  pageSize = 50, onSizeChange,
+  escuela = 'Todas', onEscuelaChange,
+  personId = '', onPersonIdChange,
+  escuelas = []
 }) => {
   if (!data || !Array.isArray(data)) return null;
   const [expandedDate, setExpandedDate] = useState<{ [personId: string]: string | null }>({});
@@ -51,24 +59,66 @@ const DataTable: React.FC<DataTableProps> = ({
   return (
     <div className="flex flex-col space-y-4">
       {/* Controles */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-zinc-50/50 p-4 rounded-2xl border border-zinc-100">
-        <div className="relative w-full md:w-96 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+      <div className="flex flex-col xl:flex-row gap-4 bg-zinc-50/50 p-4 rounded-2xl border border-zinc-100 items-start xl:items-center">
+        {/* Búsqueda Global */}
+        <div className="relative w-full xl:w-80 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
           <input
             type="text"
-            placeholder="Buscar por colaborador, ID o escuela..."
+            placeholder="Buscar por nombre..."
             value={searchTerm}
             onChange={(e) => onSearch?.(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
           />
         </div>
-        
-        <div className="flex items-center gap-3">
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Registros por página:</span>
+
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          {/* Filtro ID */}
+          <div className="relative group">
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" size={14} />
+            <input
+              type="text"
+              placeholder="Filtrar por ID..."
+              value={personId}
+              onChange={(e) => onPersonIdChange?.(e.target.value)}
+              className="pl-8 pr-3 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all placeholder:text-zinc-400 w-40"
+            />
+          </div>
+
+          {/* Filtro Escuela */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
+            <select
+              value={escuela}
+              onChange={(e) => onEscuelaChange?.(e.target.value)}
+              className="pl-8 pr-8 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all text-zinc-700 cursor-pointer appearance-none min-w-[180px]"
+            >
+              {escuelas.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
+          </div>
+
+          {(searchTerm || personId || escuela !== 'Todas') && (
+            <button
+              onClick={() => {
+                onSearch?.('');
+                onPersonIdChange?.('');
+                onEscuelaChange?.('Todas');
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-zinc-500 hover:text-zinc-950 text-xs font-bold transition-colors"
+            >
+              <X size={14} />
+              Limpiar
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider text-nowrap">Ver:</span>
           <select
             value={pageSize}
             onChange={(e) => onSizeChange?.(Number(e.target.value))}
-            className="bg-white border border-zinc-200 rounded-lg text-xs font-bold px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 text-zinc-700 cursor-pointer"
+            className="bg-white border border-zinc-200 rounded-lg text-xs font-bold px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 text-zinc-700 cursor-pointer"
           >
             {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
           </select>

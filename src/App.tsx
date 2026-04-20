@@ -22,6 +22,16 @@ const App: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [pageSize, setPageSize] = useState(50);
+  const [escuela, setEscuela] = useState('Todas');
+  const [personId, setPersonId] = useState('');
+  const [escuelas, setEscuelas] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/config/escuelas`)
+      .then(r => r.json())
+      .then(setEscuelas)
+      .catch(console.error);
+  }, []);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -37,7 +47,7 @@ const App: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`;
+        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}${personId ? `&person_id=${encodeURIComponent(personId)}` : ''}`;
         
         const [summaryRes, personasRes, personasCleanRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
           fetch(`${API_BASE}/summary`),
@@ -75,7 +85,7 @@ const App: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab, page, searchTerm, pageSize]);
+  }, [activeTab, page, searchTerm, pageSize, escuela, personId]);
 
   if (loading && !summary) {
     return (
@@ -130,11 +140,16 @@ const App: React.FC = () => {
                     onSearch={handleSearch}
                     pageSize={pageSize}
                     onSizeChange={handleSizeChange}
+                    escuela={escuela}
+                    onEscuelaChange={(val) => { setEscuela(val); setPage(1); }}
+                    personId={personId}
+                    onPersonIdChange={(val) => { setPersonId(val); setPage(1); }}
+                    escuelas={escuelas}
                   />
                 </div>
               </div>
             ) : activeTab === 'registros' ? (
-              <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out">
+              <div className="animate-in fade-in slide-in-from-bottom-5 duration-500 ease-out">
                 <div className="mb-4">
                   <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos desde PostgreSQL</h2>
                   <DataTable 
@@ -146,6 +161,11 @@ const App: React.FC = () => {
                     onSearch={handleSearch}
                     pageSize={pageSize}
                     onSizeChange={handleSizeChange}
+                    escuela={escuela}
+                    onEscuelaChange={(val) => { setEscuela(val); setPage(1); }}
+                    personId={personId}
+                    onPersonIdChange={(val) => { setPersonId(val); setPage(1); }}
+                    escuelas={escuelas}
                   />
                 </div>
               </div>

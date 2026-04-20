@@ -74,6 +74,15 @@ async def upload_file(file: UploadFile = File(...)):
 def get_devices_config():
     return DEVICES_CONFIG
 
+@app.get("/api/config/escuelas")
+def get_escuelas():
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT DISTINCT escuela FROM integrantes WHERE escuela IS NOT NULL AND escuela != '' ORDER BY escuela")
+        return ["Todas"] + [r[0] for r in cur.fetchall()]
+    finally:
+        cur.close(); conn.close()
+
 @app.get("/api/devices/status")
 def get_devices_status():
     status = {}
@@ -207,19 +216,41 @@ def get_sequence_chart():
         cur.close(); conn.close()
 
 @app.get("/api/personas")
-def get_personas(page: int = 1, size: int = 50, search: Optional[str] = None, clean: bool = False):
+def get_personas(
+    page: int = 1, 
+    size: int = 50, 
+    search: Optional[str] = None, 
+    escuela: Optional[str] = None,
+    person_id: Optional[str] = None,
+    clean: bool = False
+):
     offset = (page - 1) * size; conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        filter_sql = ""
+        # Construcción dinámica de filtros
+        query_parts = []
         params = []
+        
         if search:
-            filter_sql = "WHERE nombre ILIKE %s OR apellido ILIKE %s OR id ILIKE %s"
-            params = [f"%{search}%"] * 3
+            query_parts.append("(nombre ILIKE %s OR apellido ILIKE %s OR id ILIKE %s)")
+            params.extend([f"%{search}%"] * 3)
+            
+        if escuela and escuela != "Todas":
+            query_parts.append("escuela = %s")
+            params.append(escuela)
+            
+        if person_id:
+            query_parts.append("id ILIKE %s")
+            params.append(f"%{person_id}%")
+            
+        filter_sql = ""
+        if query_parts:
+            filter_sql = "WHERE " + " AND ".join(query_parts)
+            
         # Obtener el total para paginación
         cur.execute(f"SELECT COUNT(*) FROM integrantes {filter_sql}", params)
         total = cur.fetchone()['count']
         
-        # Consulta para obtener integrantes ordenados por su actividad más reciente (MAX(timestamp))
+        # Consulta para obtener integrantes ordenados por su actividad más reciente
         query = f"""
             SELECT i.id as "ID", i.nombre as "Nombre", i.apellido as "Apellido", i.escuela as "Departamento",
             (SELECT MAX(timestamp) FROM eventos WHERE person_id = i.id) as last_activity

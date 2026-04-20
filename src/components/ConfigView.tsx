@@ -99,8 +99,8 @@ const ConfigView: React.FC = () => {
           </div>
           <h3 className="text-2xl font-black tracking-tight mb-2">Configuración de Red Unificada</h3>
           <p className="text-zinc-400 text-sm font-medium max-w-xl leading-relaxed">
-            Todos los dispositivos están sincronizados con la subred administrativa <span className="text-white font-mono">172.18.7.0/24</span>. 
-            El servidor Hikvision centraliza la gestión de eventos faciales y el control de relevadores para las barreras vehiculares.
+            Todos los dispositivos están sincronizados con la subred administrativa <span className="text-black font-mono">172.18.7.0/24</span>. 
+            El servidor Hikvision centraliza la gestión de eventos faciales y el control de relevadores para las barreras de acceso.
           </p>
         </div>
       </div>
