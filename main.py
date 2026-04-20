@@ -6,7 +6,18 @@ import os
 import shutil
 from dotenv import load_dotenv
 from typing import List, Optional
+import json
 from datetime import datetime
+import requests
+from requests.auth import HTTPDigestAuth
+
+# Cargar configuración de dispositivos desde JSON
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "devices.json")
+with open(CONFIG_FILE, 'r') as f:
+    DEVICES_CONFIG = json.load(f)
+
+# Flattened list for status checks
+ALL_IPS = [item['ip'] for group in DEVICES_CONFIG for item in group['items']]
 
 # Importar el procesador modular
 from data_processor import process_file
@@ -58,6 +69,22 @@ async def upload_file(file: UploadFile = File(...)):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/config/devices")
+def get_devices_config():
+    return DEVICES_CONFIG
+
+@app.get("/api/devices/status")
+def get_devices_status():
+    status = {}
+    for ip in ALL_IPS:
+        try:
+            # Una petición simple para ver si responde el puerto 80
+            requests.get(f"http://{ip}", timeout=0.8)
+            status[ip] = "online"
+        except requests.exceptions.RequestException:
+            status[ip] = "offline"
+    return status
 
 @app.get("/api/summary")
 def get_summary():
@@ -188,9 +215,20 @@ def get_personas(page: int = 1, size: int = 50, search: Optional[str] = None, cl
         if search:
             filter_sql = "WHERE nombre ILIKE %s OR apellido ILIKE %s OR id ILIKE %s"
             params = [f"%{search}%"] * 3
+        # Obtener el total para paginación
         cur.execute(f"SELECT COUNT(*) FROM integrantes {filter_sql}", params)
         total = cur.fetchone()['count']
-        cur.execute(f"SELECT id as \"ID\", nombre as \"Nombre\", apellido as \"Apellido\", escuela as \"Departamento\" FROM integrantes {filter_sql} ORDER BY nombre, apellido LIMIT %s OFFSET %s", params + [size, offset])
+        
+        # Consulta para obtener integrantes ordenados por su actividad más reciente (MAX(timestamp))
+        query = f"""
+            SELECT i.id as "ID", i.nombre as "Nombre", i.apellido as "Apellido", i.escuela as "Departamento",
+            (SELECT MAX(timestamp) FROM eventos WHERE person_id = i.id) as last_activity
+            FROM integrantes i
+            {filter_sql}
+            ORDER BY last_activity DESC NULLS LAST, i.nombre ASC
+            LIMIT %s OFFSET %s
+        """
+        cur.execute(query, params + [size, offset])
         personas = cur.fetchall()
         
         # Lógica de limpieza condicional
@@ -205,7 +243,8 @@ def get_personas(page: int = 1, size: int = 50, search: Optional[str] = None, cl
             """
 
         for p in personas:
-            cur.execute(f"SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM {events_source} as e WHERE person_id = %s ORDER BY timestamp ASC, id ASC", (p['ID'],))
+            # Los eventos dentro de cada persona se ordenan de más reciente a más antiguo
+            cur.execute(f"SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM {events_source} as e WHERE person_id = %s ORDER BY timestamp DESC, id DESC", (p['ID'],))
             evts = cur.fetchall()
             p["EventosPorFecha"] = {}
             for e in evts:

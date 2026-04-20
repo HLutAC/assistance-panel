@@ -5,6 +5,7 @@ import KPIStats from './components/KPIStats';
 import DataTable from './components/DataTable';
 import AnalyticsView from './components/AnalyticsView';
 import ImportView from './components/ImportView';
+import ConfigView from './components/ConfigView';
 
 const API_BASE = "http://localhost:8000/api";
 
@@ -152,6 +153,8 @@ const App: React.FC = () => {
               <AnalyticsView charts={charts} />
             ) : activeTab === 'importar' ? (
               <ImportView />
+            ) : activeTab === 'configuracion' ? (
+              <ConfigView />
             ) : (
               <div className="premium-card p-24 text-center">
                 <div className="mx-auto w-24 h-24 bg-zinc-50 border border-zinc-100 rounded-3xl flex items-center justify-center text-zinc-300 mb-8 soft-shadow">

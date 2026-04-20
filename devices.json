@@ -1,0 +1,27 @@
+[
+  {
+    "category": "Barreras de Acceso",
+    "icon": "shield",
+    "items": [
+      { "name": "BARRERA CARRIL 01", "ip": "172.18.7.150" },
+      { "name": "BARRERA CARRIL 02", "ip": "172.18.7.151" }
+    ]
+  },
+  {
+    "category": "Reconocimiento Facial",
+    "icon": "scan",
+    "items": [
+      { "name": "REC. FACIAL INGRESO 01", "ip": "172.18.7.152" },
+      { "name": "REC. FACIAL SALIDA 01", "ip": "172.18.7.153" },
+      { "name": "REC. FACIAL INGRESO 02", "ip": "172.18.7.154" },
+      { "name": "REC. FACIAL SALIDA 02", "ip": "172.18.7.155" }
+    ]
+  },
+  {
+    "category": "Infraestructura Core",
+    "icon": "server",
+    "items": [
+      { "name": "SERVIDOR HIKVISION", "ip": "172.18.7.5" }
+    ]
+  }
+]
