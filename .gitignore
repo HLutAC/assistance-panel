@@ -54,3 +54,6 @@ sketch
 *.njsproj
 *.sln
 *.sw?
+# Personal
+devices.json
+.gitignore
