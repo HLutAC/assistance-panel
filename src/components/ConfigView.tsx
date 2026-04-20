@@ -58,10 +58,18 @@ const ConfigView: React.FC = () => {
             </div>
             
             <div className="space-y-3 flex-1">
-              {group.items.map((item, i) => {
+              {group.items.map((item: any, i: number) => {
                 const isOnline = deviceStatus[item.ip] === 'online';
+                const isClickable = group.icon === 'scan' || group.icon === 'server';
+                
                 return (
-                  <div key={i} className="flex items-center justify-between p-3 bg-zinc-50/50 rounded-xl border border-zinc-100/50 group hover:bg-zinc-50 transition-colors">
+                  <div 
+                    key={i} 
+                    onClick={() => isClickable && window.open(`http://${item.ip}`, '_blank')}
+                    className={`flex items-center justify-between p-3 bg-zinc-50/50 rounded-xl border border-zinc-100/50 group transition-all duration-300 ${
+                      isClickable ? 'cursor-pointer hover:bg-zinc-100 hover:border-zinc-300 active:scale-[0.98]' : 'cursor-default'
+                    }`}
+                  >
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter mb-0.5">{item.name}</span>
                       <span className="text-sm font-mono font-bold text-zinc-900">{item.ip}</span>
