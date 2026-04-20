@@ -1,12 +1,12 @@
 #!/bin/bash
-echo "🚀 Verificando Base de Datos PostgreSQL..."
+echo "Verificando Base de Datos PostgreSQL..."
 if ! pg_ctl -D ./.pgdata -o "-p 5433 -k $PWD/.pgdata/tmp" status > /dev/null 2>&1; then
     echo "Starting local PostgreSQL instance..."
     pg_ctl -D ./.pgdata -l ./.pgdata/logfile -o "-p 5433 -k $PWD/.pgdata/tmp" start
     sleep 2
 fi
 
-echo "🚀 Iniciando Backend FastAPI..."
+echo "Iniciando Backend FastAPI..."
 source ./venv/bin/activate
 export DB_HOST=$(pwd)/.pgdata/tmp
 
