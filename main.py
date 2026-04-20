@@ -96,32 +96,39 @@ def get_devices_status():
     return status
 
 @app.get("/api/summary")
-def get_summary():
+def get_summary(fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        # Consulta base con limpieza de 5 minutos
-        base_query = """
+        # Use parametrized query for safety even in date_filter
+        params = []
+        if fecha:
+            date_filter = "WHERE timestamp::date = %s"
+            params.append(fecha)
+        else:
+            date_filter = ""
+            
+        cur.execute("SELECT COUNT(*) as total FROM eventos")
+        total_raw = cur.fetchone()['total']
+        
+        base_query_clean = f"""
         WITH deduplicated AS (
             SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos
+            FROM eventos {date_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
         
-        cur.execute(f"SELECT COUNT(*) as total FROM ({base_query}) as d")
+        cur.execute(f"SELECT COUNT(*) as total FROM ({base_query_clean}) as d", params)
         total_clean = cur.fetchone()['total']
         
-        cur.execute("SELECT COUNT(*) as total_raw FROM eventos")
-        total_raw = cur.fetchone()['total_raw']
+        cur.execute(f"SELECT COUNT(*) as total FROM ({base_query_clean}) as d WHERE tipo_movimiento = 'INGRESO'", params)
+        ingresos = cur.fetchone()['total']
         
-        cur.execute(f"SELECT COUNT(*) as ingresos FROM ({base_query}) as d WHERE tipo_movimiento = 'INGRESO'")
-        ingresos = cur.fetchone()['ingresos']
+        cur.execute(f"SELECT COUNT(*) as total FROM ({base_query_clean}) as d WHERE tipo_movimiento = 'SALIDA'", params)
+        salidas = cur.fetchone()['total']
         
-        cur.execute(f"SELECT COUNT(*) as salidas FROM ({base_query}) as d WHERE tipo_movimiento = 'SALIDA'")
-        salidas = cur.fetchone()['salidas']
-        
-        cur.execute(f"SELECT COUNT(DISTINCT person_id) as usuarios FROM ({base_query}) as d")
-        usuarios = cur.fetchone()['usuarios']
+        cur.execute(f"SELECT COUNT(DISTINCT person_id) as total FROM ({base_query_clean}) as d", params)
+        usuarios = cur.fetchone()['total']
         
         return {
             "total_raw": total_raw, 
@@ -135,18 +142,20 @@ def get_summary():
         cur.close(); conn.close()
 
 @app.get("/api/charts/hourly")
-def get_hourly_chart():
+def get_hourly_chart(fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        base_query = """
+        params = [fecha] if fecha else []
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        base_query = f"""
         WITH deduplicated AS (
             SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos
+            FROM eventos {date_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
         query = f"SELECT EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d GROUP BY hora ORDER BY hora;"
-        cur.execute(query); results = cur.fetchall()
+        cur.execute(query, params); results = cur.fetchall()
         full_hourly = []
         res_map = {int(r['hora']): r for r in results}
         for h in range(24):
@@ -159,33 +168,37 @@ def get_hourly_chart():
         cur.close(); conn.close()
 
 @app.get("/api/charts/lane")
-def get_lane_chart():
+def get_lane_chart(fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        base_query = """
+        params = [fecha] if fecha else []
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        base_query = f"""
         WITH deduplicated AS (
             SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos
+            FROM eventos {date_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
-        cur.execute(f"SELECT carril as name, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d WHERE carril != 'Desconocido' GROUP BY carril;")
+        cur.execute(f"SELECT carril as name, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d WHERE carril != 'Desconocido' GROUP BY carril;", params)
         return cur.fetchall()
     finally:
         cur.close(); conn.close()
 
 @app.get("/api/charts/heatmap")
-def get_heatmap_chart():
+def get_heatmap_chart(fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        base_query = """
+        params = [fecha] if fecha else []
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        base_query = f"""
         WITH deduplicated AS (
             SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos
+            FROM eventos {date_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
-        cur.execute(f"SELECT timestamp::date::text as fecha, EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) as value FROM ({base_query}) as d GROUP BY fecha, hora ORDER BY fecha DESC, hora LIMIT 500;")
+        cur.execute(f"SELECT timestamp::date::text as fecha, EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) as value FROM ({base_query}) as d GROUP BY fecha, hora ORDER BY fecha DESC, hora LIMIT 500;", params)
         return cur.fetchall()
     finally:
         cur.close(); conn.close()
@@ -221,6 +234,7 @@ def get_personas(
     size: int = 50, 
     search: Optional[str] = None, 
     escuela: Optional[str] = None,
+    fecha: Optional[str] = None,
     person_id: Optional[str] = None,
     clean: bool = False
 ):
@@ -247,41 +261,46 @@ def get_personas(
             filter_sql = "WHERE " + " AND ".join(query_parts)
             
         # Obtener el total para paginación
-        cur.execute(f"SELECT COUNT(*) FROM integrantes {filter_sql}", params)
-        total = cur.fetchone()['count']
+        cur.execute(f"SELECT COUNT(*) as total FROM integrantes {filter_sql}", params)
+        total = cur.fetchone()['total']
         
-        # Consulta para obtener integrantes ordenados por su actividad más reciente
-        query = f"""
-            SELECT i.id as "ID", i.nombre as "Nombre", i.apellido as "Apellido", i.escuela as "Departamento",
-            (SELECT MAX(timestamp) FROM eventos WHERE person_id = i.id) as last_activity
-            FROM integrantes i
-            {filter_sql}
-            ORDER BY last_activity DESC NULLS LAST, i.nombre ASC
-            LIMIT %s OFFSET %s
-        """
-        cur.execute(query, params + [size, offset])
+        # Obtener la lista de personas
+        cur.execute(f"SELECT id as \"ID\", nombre as \"Nombre\", apellido as \"Apellido\", escuela as \"escuela\" FROM integrantes {filter_sql} ORDER BY id ASC LIMIT %s OFFSET %s", (*params, size, offset))
         personas = cur.fetchall()
         
-        # Lógica de limpieza condicional
-        events_source = "eventos"
-        if clean:
-            events_source = """
-            (WITH deduplicated AS (
-                SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-                FROM eventos
-            )
-            SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes')
-            """
-
+        # Para cada persona, obtener sus eventos
         for p in personas:
-            # Los eventos dentro de cada persona se ordenan de más reciente a más antiguo
-            cur.execute(f"SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM {events_source} as e WHERE person_id = %s ORDER BY timestamp DESC, id DESC", (p['ID'],))
+            events_source = "eventos"
+            date_filter = ""
+            event_params = [p['ID']]
+            
+            if fecha:
+                date_filter = "AND timestamp::date = %s"
+                event_params.append(fecha)
+
+            if clean:
+                events_source = f"""(
+                    WITH deduplicated AS (
+                        SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+                        FROM eventos WHERE person_id = %s {date_filter}
+                    )
+                    SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+                )"""
+            else:
+                events_source = f"(SELECT * FROM eventos WHERE person_id = %s {date_filter})"
+            
+            # Reconstruct query
+            cur.execute(f"SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM {events_source} as e ORDER BY timestamp DESC, id DESC", event_params)
             evts = cur.fetchall()
-            p["EventosPorFecha"] = {}
+            
+            # Agrupar por fecha para el frontend
+            grouped = {}
             for e in evts:
-                f = e['f']
-                if f not in p["EventosPorFecha"]: p["EventosPorFecha"][f] = []
-                p["EventosPorFecha"][f].append(e)
+                d = e['f']
+                if d not in grouped: grouped[d] = []
+                grouped[d].append(e)
+            p['EventosPorFecha'] = grouped
+            
         return {"items": personas, "total": total, "page": page, "size": size}
     finally:
         cur.close(); conn.close()

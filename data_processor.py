@@ -85,7 +85,7 @@ def process_file(file_path):
         with open(personal_info_path, 'r', encoding='utf-8', errors='ignore') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                pid = row.get('ID', '').strip()
+                pid = str(row.get('ID', '')).strip()
                 if pid: personal_info[pid] = row.get('escuela', '').strip()
 
     processed_data = []

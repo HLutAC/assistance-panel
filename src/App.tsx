@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
 import KPIStats from './components/KPIStats';
 import DataTable from './components/DataTable';
 import AnalyticsView from './components/AnalyticsView';
@@ -23,8 +21,8 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pageSize, setPageSize] = useState(50);
   const [escuela, setEscuela] = useState('Todas');
-  const [personId, setPersonId] = useState('');
   const [escuelas, setEscuelas] = useState<string[]>([]);
+  const [fecha, setFecha] = useState('');
 
   useEffect(() => {
     fetch(`${API_BASE}/config/escuelas`)
@@ -47,15 +45,15 @@ const App: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}${personId ? `&person_id=${encodeURIComponent(personId)}` : ''}`;
+        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}&fecha=${fecha}`;
         
         const [summaryRes, personasRes, personasCleanRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
-          fetch(`${API_BASE}/summary`),
+          fetch(`${API_BASE}/summary?fecha=${fecha}`),
           fetch(`${API_BASE}/personas?${queryParams}`),
           fetch(`${API_BASE}/personas?${queryParams}&clean=true`),
-          fetch(`${API_BASE}/charts/hourly`),
-          fetch(`${API_BASE}/charts/lane`),
-          fetch(`${API_BASE}/charts/heatmap`),
+          fetch(`${API_BASE}/charts/hourly?fecha=${fecha}`),
+          fetch(`${API_BASE}/charts/lane?fecha=${fecha}`),
+          fetch(`${API_BASE}/charts/heatmap?fecha=${fecha}`),
           fetch(`${API_BASE}/charts/sequence`)
         ]);
 
@@ -85,52 +83,92 @@ const App: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab, page, searchTerm, pageSize, escuela, personId]);
+  }, [activeTab, page, searchTerm, pageSize, escuela, fecha]);
 
   if (loading && !summary) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 space-y-6">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-500 shadow-sm"></div>
+        <span className="tech-label-light animate-pulse">CARGANDO RECURSOS...</span>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-white font-sans text-zinc-950 selection:bg-primary-500/10">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <Header />
-        
-        <main className="flex-1 overflow-y-auto p-10 custom-scrollbar relative">
-          <div className="max-w-7xl mx-auto">
-            {/* Page Header */}
-            <div className="mb-12 print:mb-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-1.5 h-1.5 bg-primary-500 rounded-full soft-shadow"></div>
-                <span className="text-[10px] font-black text-primary-600 uppercase tracking-[0.3em]">Módulo Administrativo</span>
-              </div>
-              <h1 className="text-5xl font-black text-zinc-950 tracking-tighter mb-4 leading-tight">
-                {activeTab === 'resumen' && 'Resumen Ejecutivo'}
-                {activeTab === 'registros' && 'Bitácora Completa'}
-                {activeTab === 'graficos' && 'Análisis de Datos'}
-                {activeTab === 'importar' && 'Centro de Ingesta'}
-                {activeTab === 'configuracion' && 'Ajustes del Sistema'}
-              </h1>
-              <p className="text-zinc-500 text-lg font-medium max-w-2xl leading-relaxed">
-                Plataforma de visualización de datos de alta precisión respaldada por PostgreSQL para la gestión de informes operativos.
-              </p>
-            </div>
+    <div className="polaris-container bg-slate-50/50">
+      {/* Dynamic Background Accents */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-            {/* Content Switcher based on tab */}
+      {/* Main Navigation Dock */}
+      <div className="nav-dock">
+        <div 
+          onClick={() => setActiveTab('resumen')}
+          className={`nav-item ${activeTab === 'resumen' ? 'active' : ''}`}
+        >
+          RESUMEN
+        </div>
+        <div 
+          onClick={() => setActiveTab('registros')}
+          className={`nav-item ${activeTab === 'registros' ? 'active' : ''}`}
+        >
+          BITÁCORA
+        </div>
+        <div 
+          onClick={() => setActiveTab('graficos')}
+          className={`nav-item ${activeTab === 'graficos' ? 'active' : ''}`}
+        >
+          ANÁLISIS
+        </div>
+        <div 
+          onClick={() => setActiveTab('importar')}
+          className={`nav-item ${activeTab === 'importar' ? 'active' : ''}`}
+        >
+          INGESTA
+        </div>
+        <div 
+          onClick={() => setActiveTab('configuracion')}
+          className={`nav-item ${activeTab === 'configuracion' ? 'active' : ''}`}
+        >
+          SISTEMA
+        </div>
+      </div>
+
+      {/* Primary Application Stage */}
+      <div className="flex-1 overflow-hidden relative z-10 flex flex-col items-center py-4">
+        <div className="w-full max-w-7xl h-[calc(100vh-80px)] polaris-glass p-10 flex flex-col animate-in slide-in-from-bottom-4 duration-700">
+          
+          {/* Polaris Header */}
+          <div className="polaris-header">
+            <div className="flex items-center space-x-5">
+              <div className="w-10 h-10 bg-primary-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
+                <span className="font-black text-lg">S</span>
+              </div>
+              <div>
+                <span className="tech-label-light">SmartAccess // 2.0</span>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+                  {activeTab === 'resumen' && 'Dashboard Operativo'}
+                  {activeTab === 'registros' && 'Control de Tráfico'}
+                  {activeTab === 'graficos' && 'Analítica Avanzada'}
+                  {activeTab === 'importar' && 'Motor de Ingesta'}
+                  {activeTab === 'configuracion' && 'Configuración de Nodos'}
+                </h1>
+              </div>
+            </div>
+            <div className="text-right hidden md:block">
+              <span className="tech-label-light">SISTEMA EN LÍNEA</span>
+              <p className="text-sm font-bold text-slate-500">{new Date().toLocaleDateString()} — {new Date().toLocaleTimeString()}</p>
+            </div>
+          </div>
+
+          {/* Module Stage Container */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
             {activeTab === 'resumen' ? (
-              <div className="animate-in fade-in slide-in-from-bottom-6 duration-1000 ease-out">
-                <div className="mb-4">
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Métricas Globales (Histórico)</h2>
+              <div className="space-y-10">
+                <div>
                   <KPIStats summary={summary} />
                 </div>
                 <div>
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos Recientes (Depurado)</h2>
                   <DataTable 
                     data={personasClean} 
                     page={page} 
@@ -142,32 +180,29 @@ const App: React.FC = () => {
                     onSizeChange={handleSizeChange}
                     escuela={escuela}
                     onEscuelaChange={(val) => { setEscuela(val); setPage(1); }}
-                    personId={personId}
-                    onPersonIdChange={(val) => { setPersonId(val); setPage(1); }}
                     escuelas={escuelas}
+                    fecha={fecha}
+                    onFechaChange={(val) => { setFecha(val); setPage(1); }}
                   />
                 </div>
               </div>
             ) : activeTab === 'registros' ? (
-              <div className="animate-in fade-in slide-in-from-bottom-5 duration-500 ease-out">
-                <div className="mb-4">
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos desde PostgreSQL</h2>
-                  <DataTable 
-                    data={personas} 
-                    page={page} 
-                    setPage={setPage} 
-                    total={total} 
-                    searchTerm={searchTerm}
-                    onSearch={handleSearch}
-                    pageSize={pageSize}
-                    onSizeChange={handleSizeChange}
-                    escuela={escuela}
-                    onEscuelaChange={(val) => { setEscuela(val); setPage(1); }}
-                    personId={personId}
-                    onPersonIdChange={(val) => { setPersonId(val); setPage(1); }}
-                    escuelas={escuelas}
-                  />
-                </div>
+              <div className="h-full flex flex-col">
+                <DataTable 
+                  data={personas} 
+                  page={page} 
+                  setPage={setPage} 
+                  total={total} 
+                  searchTerm={searchTerm}
+                  onSearch={handleSearch}
+                  pageSize={pageSize}
+                  onSizeChange={handleSizeChange}
+                  escuela={escuela}
+                  onEscuelaChange={(val) => { setEscuela(val); setPage(1); }}
+                  escuelas={escuelas}
+                  fecha={fecha}
+                  onFechaChange={(val) => { setFecha(val); setPage(1); }}
+                />
               </div>
             ) : activeTab === 'graficos' ? (
               <AnalyticsView charts={charts} />
@@ -175,28 +210,14 @@ const App: React.FC = () => {
               <ImportView />
             ) : activeTab === 'configuracion' ? (
               <ConfigView />
-            ) : (
-              <div className="premium-card p-24 text-center">
-                <div className="mx-auto w-24 h-24 bg-zinc-50 border border-zinc-100 rounded-3xl flex items-center justify-center text-zinc-300 mb-8 soft-shadow">
-                  <span className="text-4xl animate-pulse font-black italic">...</span>
-                </div>
-                <h3 className="text-3xl font-black text-zinc-950 tracking-tight">PostgreSQL Backend</h3>
-                <p className="text-zinc-500 mt-4 max-w-md mx-auto text-lg font-medium leading-relaxed">
-                  Sistema conectado exitosamente. Los datos se sirven ahora de forma dinámica desde el servidor administrado.
-                </p>
-              </div>
-            )}
-            
-            {/* Print Only Footer */}
-            <div className="hidden print:block mt-12 pt-8 border-t border-zinc-100">
-              <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                <span>Generado el: {new Date().toLocaleString()}</span>
-                <span>Página 1 de 1</span>
-                <span>SmartAccess Dashboard Suite v4.0.0 (PG)</span>
-              </div>
-            </div>
+            ) : null}
           </div>
-        </main>
+        </div>
+      </div>
+
+      {/* Decorative Footprint */}
+      <div className="fixed bottom-4 left-8 text-[10px] font-bold text-slate-300 uppercase tracking-widest hidden lg:block">
+        © 2026 Oficina de Tecnologia e Informacion // Polaris Interface
       </div>
     </div>
   );
