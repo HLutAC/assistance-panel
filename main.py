@@ -63,15 +63,38 @@ async def upload_file(file: UploadFile = File(...)):
 def get_summary():
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT COUNT(*) as total FROM eventos")
-        total = cur.fetchone()['total']
-        cur.execute("SELECT COUNT(*) as ingresos FROM eventos WHERE tipo_movimiento = 'INGRESO'")
+        # Consulta base con limpieza de 5 minutos
+        base_query = """
+        WITH deduplicated AS (
+            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+            FROM eventos
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        
+        cur.execute(f"SELECT COUNT(*) as total FROM ({base_query}) as d")
+        total_clean = cur.fetchone()['total']
+        
+        cur.execute("SELECT COUNT(*) as total_raw FROM eventos")
+        total_raw = cur.fetchone()['total_raw']
+        
+        cur.execute(f"SELECT COUNT(*) as ingresos FROM ({base_query}) as d WHERE tipo_movimiento = 'INGRESO'")
         ingresos = cur.fetchone()['ingresos']
-        cur.execute("SELECT COUNT(*) as salidas FROM eventos WHERE tipo_movimiento = 'SALIDA'")
+        
+        cur.execute(f"SELECT COUNT(*) as salidas FROM ({base_query}) as d WHERE tipo_movimiento = 'SALIDA'")
         salidas = cur.fetchone()['salidas']
-        cur.execute("SELECT COUNT(DISTINCT person_id) as usuarios FROM eventos")
+        
+        cur.execute(f"SELECT COUNT(DISTINCT person_id) as usuarios FROM ({base_query}) as d")
         usuarios = cur.fetchone()['usuarios']
-        return {"total_raw": total, "ingresos": ingresos, "salidas": salidas, "usuarios_unicos": usuarios}
+        
+        return {
+            "total_raw": total_raw, 
+            "total_clean": total_clean, 
+            "ingresos": ingresos, 
+            "salidas": salidas, 
+            "usuarios_unicos": usuarios,
+            "eliminados": total_raw - total_clean
+        }
     finally:
         cur.close(); conn.close()
 
@@ -79,7 +102,14 @@ def get_summary():
 def get_hourly_chart():
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        query = "SELECT EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM eventos GROUP BY hora ORDER BY hora;"
+        base_query = """
+        WITH deduplicated AS (
+            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+            FROM eventos
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        query = f"SELECT EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d GROUP BY hora ORDER BY hora;"
         cur.execute(query); results = cur.fetchall()
         full_hourly = []
         res_map = {int(r['hora']): r for r in results}
@@ -96,7 +126,14 @@ def get_hourly_chart():
 def get_lane_chart():
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT carril as name, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM eventos WHERE carril != 'Desconocido' GROUP BY carril;")
+        base_query = """
+        WITH deduplicated AS (
+            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+            FROM eventos
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        cur.execute(f"SELECT carril as name, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d WHERE carril != 'Desconocido' GROUP BY carril;")
         return cur.fetchall()
     finally:
         cur.close(); conn.close()
@@ -105,7 +142,14 @@ def get_lane_chart():
 def get_heatmap_chart():
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT timestamp::date::text as fecha, EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) as value FROM eventos GROUP BY fecha, hora ORDER BY fecha DESC, hora LIMIT 500;")
+        base_query = """
+        WITH deduplicated AS (
+            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+            FROM eventos
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        cur.execute(f"SELECT timestamp::date::text as fecha, EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) as value FROM ({base_query}) as d GROUP BY fecha, hora ORDER BY fecha DESC, hora LIMIT 500;")
         return cur.fetchall()
     finally:
         cur.close(); conn.close()
@@ -120,7 +164,15 @@ def get_sequence_chart():
             uid = row['person_id']
             cur.execute("SELECT nombre, apellido FROM integrantes WHERE id = %s", (uid,))
             user = cur.fetchone()
-            cur.execute("SELECT timestamp::text as t, CASE WHEN tipo_movimiento = 'INGRESO' THEN 1 ELSE -1 END as tipo, tipo_movimiento as label FROM eventos WHERE person_id = %s ORDER BY timestamp DESC LIMIT 50;", (uid,))
+            # En la secuencia individual TAMBIÉN aplicamos la limpieza de 5 minutos para que sea consistente con el resumen
+            base_query = """
+            WITH deduplicated AS (
+                SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+                FROM eventos WHERE person_id = %s
+            )
+            SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+            """
+            cur.execute(f"SELECT timestamp::text as t, CASE WHEN tipo_movimiento = 'INGRESO' THEN 1 ELSE -1 END as tipo, tipo_movimiento as label FROM ({base_query}) as d ORDER BY timestamp ASC, id ASC LIMIT 50;", (uid,))
             evts = cur.fetchall()
             sequences.append({"id": uid, "nombre": f"{user['nombre']} {user['apellido']}", "eventos": evts})
         return sequences
@@ -128,7 +180,7 @@ def get_sequence_chart():
         cur.close(); conn.close()
 
 @app.get("/api/personas")
-def get_personas(page: int = 1, size: int = 50, search: Optional[str] = None):
+def get_personas(page: int = 1, size: int = 50, search: Optional[str] = None, clean: bool = False):
     offset = (page - 1) * size; conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         filter_sql = ""
@@ -140,8 +192,20 @@ def get_personas(page: int = 1, size: int = 50, search: Optional[str] = None):
         total = cur.fetchone()['count']
         cur.execute(f"SELECT id as \"ID\", nombre as \"Nombre\", apellido as \"Apellido\", escuela as \"Departamento\" FROM integrantes {filter_sql} ORDER BY nombre, apellido LIMIT %s OFFSET %s", params + [size, offset])
         personas = cur.fetchall()
+        
+        # Lógica de limpieza condicional
+        events_source = "eventos"
+        if clean:
+            events_source = """
+            (WITH deduplicated AS (
+                SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+                FROM eventos
+            )
+            SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes')
+            """
+
         for p in personas:
-            cur.execute("SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM eventos WHERE person_id = %s ORDER BY timestamp DESC LIMIT 10", (p['ID'],))
+            cur.execute(f"SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM {events_source} as e WHERE person_id = %s ORDER BY timestamp ASC, id ASC", (p['ID'],))
             evts = cur.fetchall()
             p["EventosPorFecha"] = {}
             for e in evts:

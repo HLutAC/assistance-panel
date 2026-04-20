@@ -33,12 +33,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
   const heatmapGrid = useMemo(() => {
     if (!safeCharts.heatmap.length) return [];
     
-    const dates = Array.from(new Set(safeCharts.heatmap.map(d => d.fecha))).sort((a, b) => {
-        // Ordenar fechas (asumiendo DD/MM)
-        const [da, ma] = a.split('/').map(Number);
-        const [db, mb] = b.split('/').map(Number);
-        return ma === mb ? da - db : ma - mb;
-    });
+    const dates = Array.from(new Set(safeCharts.heatmap.map(d => d.fecha))).sort((a, b) => a.localeCompare(b));
     
     return dates.map(fecha => {
       const hours = Array(24).fill(0);

@@ -17,13 +17,14 @@ interface Persona {
 
 interface DataTableProps {
   data: Persona[];
+  page?: number;
+  setPage?: (page: number) => void;
+  total?: number;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ data }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, page = 1, setPage, total = 0 }) => {
   if (!data || !Array.isArray(data)) return null;
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [expandedDate, setExpandedDate] = useState<{ [personId: string]: string | null }>({});
   const [openDateMenu, setOpenDateMenu] = useState<string | null>(null);
 
@@ -35,7 +36,7 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     setOpenDateMenu(null);
   };
 
-  // Filtrado
+  // Filtrado local (se mantiene para conveniencia sobre los 50 resultados actuales)
   const filteredData = useMemo(() => {
     return data.filter(p => {
       const searchStr = `${p.Nombre} ${p.Apellido} ${p.ID} ${p.Departamento}`.toLowerCase();
@@ -43,24 +44,16 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
     });
   }, [data, searchTerm]);
 
-  // Paginación
-  const totalPages = Math.ceil(filteredData.length / pageSize);
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage, pageSize]);
+  // Ya no re-paginamos localmente porque viene del API
+  const paginatedData = filteredData;
 
   // Manejador de búsqueda
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); 
+    // Nota: El filtrado por servidor para búsqueda podría implementarse luego
   };
 
-  // Manejador de tamaño de página
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setPageSize(Number(e.target.value));
-    setCurrentPage(1);
-  };
+  const totalPages = Math.ceil(total / 50);
 
   return (
     <div className="flex flex-col space-y-4">
@@ -78,14 +71,8 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         </div>
         
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Mostrar:</span>
-          <select
-            value={pageSize}
-            onChange={handlePageSizeChange}
-            className="bg-white border border-zinc-200 rounded-lg text-xs font-bold px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 text-zinc-700"
-          >
-            {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Registros por página:</span>
+          <div className="bg-white border border-zinc-200 rounded-lg text-xs font-bold px-3 py-2 text-zinc-700">50</div>
         </div>
       </div>
 
@@ -227,23 +214,23 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
         {/* Pagination Footer */}
         <div className="px-6 py-4 bg-zinc-50/50 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-center sm:text-left">
-              Página <span className="text-zinc-950">{currentPage}</span> de <span className="text-zinc-950">{totalPages || 1}</span>
+              Página <span className="text-zinc-950">{page}</span> de <span className="text-zinc-950">{totalPages || 1}</span>
               <span className="mx-2 text-zinc-200">|</span>
-              Mostrando <span className="text-zinc-950">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredData.length)}</span> de <span className="text-zinc-950">{filteredData.length}</span> resultados
+              Mostrando <span className="text-zinc-950">{(page - 1) * 50 + 1}-{Math.min(page * 50, total)}</span> de <span className="text-zinc-950">{total}</span> resultados
           </div>
           
           <div className="flex items-center gap-1">
               <button 
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
+                onClick={() => setPage?.(1)}
+                disabled={page === 1}
                 className="p-2 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Primera página"
               >
                 <ChevronsLeft size={16} />
               </button>
               <button 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setPage?.(Math.max(1, page - 1))}
+                disabled={page === 1}
                 className="p-2 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Anterior"
               >
@@ -251,20 +238,20 @@ const DataTable: React.FC<DataTableProps> = ({ data }) => {
               </button>
               
               <div className="flex items-center px-4">
-                <span className="text-xs font-black text-zinc-950 w-8 text-center">{currentPage}</span>
+                <span className="text-xs font-black text-zinc-950 w-8 text-center">{page}</span>
               </div>
               
               <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setPage?.(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages || totalPages === 0}
                 className="p-2 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Siguiente"
               >
                 <ChevronRight size={16} />
               </button>
               <button 
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setPage?.(totalPages)}
+                disabled={page === totalPages || totalPages === 0}
                 className="p-2 text-zinc-400 hover:text-zinc-950 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Última página"
               >

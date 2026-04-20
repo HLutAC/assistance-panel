@@ -12,16 +12,22 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('resumen');
   const [summary, setSummary] = useState<any>(null);
   const [personas, setPersonas] = useState<any>([]);
+  const [personasClean, setPersonasClean] = useState<any>([]);
   const [charts, setCharts] = useState<any>({ hourly: [], lane: [], pie: [], heatmap: [], sequence: [] });
   const [loading, setLoading] = useState(true);
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [summaryRes, personasRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
+        const [summaryRes, personasRes, personasCleanRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
           fetch(`${API_BASE}/summary`),
-          fetch(`${API_BASE}/personas?size=50`),
+          fetch(`${API_BASE}/personas?page=${page}&size=50`),
+          fetch(`${API_BASE}/personas?page=${page}&size=50&clean=true`),
           fetch(`${API_BASE}/charts/hourly`),
           fetch(`${API_BASE}/charts/lane`),
           fetch(`${API_BASE}/charts/heatmap`),
@@ -30,9 +36,12 @@ const App: React.FC = () => {
 
         const summaryData = await summaryRes.json();
         const personasData = await personasRes.json();
+        const personasCleanData = await personasCleanRes.json();
         
         setSummary(summaryData);
         setPersonas(personasData.items);
+        setPersonasClean(personasCleanData.items);
+        setTotal(personasData.total);
         setCharts({
           hourly: await hourlyRes.json(),
           lane: await laneRes.json(),
@@ -51,7 +60,7 @@ const App: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, page]);
 
   if (loading && !summary) {
     return (
@@ -96,15 +105,15 @@ const App: React.FC = () => {
                   <KPIStats summary={summary} />
                 </div>
                 <div>
-                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos Recientes</h2>
-                  <DataTable data={personas} />
+                  <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos Recientes (Depurado)</h2>
+                  <DataTable data={personasClean} page={page} setPage={setPage} total={total} />
                 </div>
               </div>
             ) : activeTab === 'registros' ? (
               <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out">
                 <div className="mb-4">
                   <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos desde PostgreSQL</h2>
-                  <DataTable data={personas} />
+                  <DataTable data={personas} page={page} setPage={setPage} total={total} />
                 </div>
               </div>
             ) : activeTab === 'graficos' ? (

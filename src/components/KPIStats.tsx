@@ -15,13 +15,13 @@ interface KPIStatsProps {
 const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
   if (!summary) return null;
   
-  const total = summary.total_raw ?? summary.total_clean ?? 0;
+  const total = summary.total_clean ?? summary.total_raw ?? 0;
   const stats = [
     {
       title: 'Tránsito Total',
       value: total.toLocaleString(),
-      trend: `+${((total / 30) | 0)}/día`,
-      trendPositive: true,
+      trend: summary.eliminados ? `-${summary.eliminados} depurados` : `+${((total / 30) | 0)}/día`,
+      trendPositive: !summary.eliminados,
       icon: Users,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50'
