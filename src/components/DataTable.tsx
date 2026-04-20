@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from 'lucide-react';
 
 interface Evento {
@@ -20,11 +20,18 @@ interface DataTableProps {
   page?: number;
   setPage?: (page: number) => void;
   total?: number;
+  searchTerm?: string;
+  onSearch?: (term: string) => void;
+  pageSize?: number;
+  onSizeChange?: (size: number) => void;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ data, page = 1, setPage, total = 0 }) => {
+const DataTable: React.FC<DataTableProps> = ({ 
+  data, page = 1, setPage, total = 0, 
+  searchTerm = '', onSearch, 
+  pageSize = 50, onSizeChange 
+}) => {
   if (!data || !Array.isArray(data)) return null;
-  const [searchTerm, setSearchTerm] = useState('');
   const [expandedDate, setExpandedDate] = useState<{ [personId: string]: string | null }>({});
   const [openDateMenu, setOpenDateMenu] = useState<string | null>(null);
 
@@ -36,24 +43,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, page = 1, setPage, total = 
     setOpenDateMenu(null);
   };
 
-  // Filtrado local (se mantiene para conveniencia sobre los 50 resultados actuales)
-  const filteredData = useMemo(() => {
-    return data.filter(p => {
-      const searchStr = `${p.Nombre} ${p.Apellido} ${p.ID} ${p.Departamento}`.toLowerCase();
-      return searchStr.includes(searchTerm.toLowerCase());
-    });
-  }, [data, searchTerm]);
+  // El filtrado y paginación ahora ocurren en el servidor
+  const paginatedData = data;
 
-  // Ya no re-paginamos localmente porque viene del API
-  const paginatedData = filteredData;
-
-  // Manejador de búsqueda
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    // Nota: El filtrado por servidor para búsqueda podría implementarse luego
-  };
-
-  const totalPages = Math.ceil(total / 50);
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="flex flex-col space-y-4">
@@ -65,14 +58,20 @@ const DataTable: React.FC<DataTableProps> = ({ data, page = 1, setPage, total = 
             type="text"
             placeholder="Buscar por colaborador, ID o escuela..."
             value={searchTerm}
-            onChange={handleSearch}
+            onChange={(e) => onSearch?.(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-zinc-400"
           />
         </div>
         
         <div className="flex items-center gap-3">
           <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Registros por página:</span>
-          <div className="bg-white border border-zinc-200 rounded-lg text-xs font-bold px-3 py-2 text-zinc-700">50</div>
+          <select
+            value={pageSize}
+            onChange={(e) => onSizeChange?.(Number(e.target.value))}
+            className="bg-white border border-zinc-200 rounded-lg text-xs font-bold px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 text-zinc-700 cursor-pointer"
+          >
+            {[10, 20, 50, 100].map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
         </div>
       </div>
 
@@ -216,7 +215,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, page = 1, setPage, total = 
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-center sm:text-left">
               Página <span className="text-zinc-950">{page}</span> de <span className="text-zinc-950">{totalPages || 1}</span>
               <span className="mx-2 text-zinc-200">|</span>
-              Mostrando <span className="text-zinc-950">{(page - 1) * 50 + 1}-{Math.min(page * 50, total)}</span> de <span className="text-zinc-950">{total}</span> resultados
+              Mostrando <span className="text-zinc-950">{(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)}</span> de <span className="text-zinc-950">{total}</span> resultados
           </div>
           
           <div className="flex items-center gap-1">

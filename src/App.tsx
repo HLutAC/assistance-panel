@@ -16,18 +16,32 @@ const App: React.FC = () => {
   const [charts, setCharts] = useState<any>({ hourly: [], lane: [], pie: [], heatmap: [], sequence: [] });
   const [loading, setLoading] = useState(true);
   
-  // Pagination State
+  // Pagination, Search & Size State
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [pageSize, setPageSize] = useState(50);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    setPage(1);
+  };
+
+  const handleSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`;
+        
         const [summaryRes, personasRes, personasCleanRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
           fetch(`${API_BASE}/summary`),
-          fetch(`${API_BASE}/personas?page=${page}&size=50`),
-          fetch(`${API_BASE}/personas?page=${page}&size=50&clean=true`),
+          fetch(`${API_BASE}/personas?${queryParams}`),
+          fetch(`${API_BASE}/personas?${queryParams}&clean=true`),
           fetch(`${API_BASE}/charts/hourly`),
           fetch(`${API_BASE}/charts/lane`),
           fetch(`${API_BASE}/charts/heatmap`),
@@ -60,7 +74,7 @@ const App: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab, page]);
+  }, [activeTab, page, searchTerm, pageSize]);
 
   if (loading && !summary) {
     return (
@@ -106,14 +120,32 @@ const App: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Resumen de Accesos Recientes (Depurado)</h2>
-                  <DataTable data={personasClean} page={page} setPage={setPage} total={total} />
+                  <DataTable 
+                    data={personasClean} 
+                    page={page} 
+                    setPage={setPage} 
+                    total={total} 
+                    searchTerm={searchTerm}
+                    onSearch={handleSearch}
+                    pageSize={pageSize}
+                    onSizeChange={handleSizeChange}
+                  />
                 </div>
               </div>
             ) : activeTab === 'registros' ? (
               <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out">
                 <div className="mb-4">
                   <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Bitácora Completa de Eventos desde PostgreSQL</h2>
-                  <DataTable data={personas} page={page} setPage={setPage} total={total} />
+                  <DataTable 
+                    data={personas} 
+                    page={page} 
+                    setPage={setPage} 
+                    total={total} 
+                    searchTerm={searchTerm}
+                    onSearch={handleSearch}
+                    pageSize={pageSize}
+                    onSizeChange={handleSizeChange}
+                  />
                 </div>
               </div>
             ) : activeTab === 'graficos' ? (
