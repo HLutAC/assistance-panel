@@ -56,4 +56,3 @@ sketch
 *.sw?
 # Personal
 devices.json
-.gitignore
