@@ -83,16 +83,23 @@ def get_escuelas():
     finally:
         cur.close(); conn.close()
 
+import socket
+
 @app.get("/api/devices/status")
 def get_devices_status():
     status = {}
     for ip in ALL_IPS:
-        try:
-            # Una petición simple para ver si responde el puerto 80
-            requests.get(f"http://{ip}", timeout=0.8)
-            status[ip] = "online"
-        except requests.exceptions.RequestException:
-            status[ip] = "offline"
+        is_online = False
+        # Intentamos conectar a los puertos más comunes (80 para ISAPI/Web, 8000 para SDK)
+        for port in [80, 8000]:
+            try:
+                with socket.create_connection((ip, port), timeout=0.6):
+                    is_online = True
+                    break
+            except (socket.timeout, ConnectionRefusedError, OSError):
+                continue
+        
+        status[ip] = "online" if is_online else "offline"
     return status
 
 @app.get("/api/summary")

@@ -15,7 +15,7 @@ interface AnalyticsViewProps {
   };
 }
 
-const COLORS = ['#4f46e5', '#06b6d4', '#6366f1', '#22d3ee', '#818cf8'];
+const COLORS = ['#1d4ed8', '#10b981', '#f97316', '#6366f1', '#64748b'];
 
 const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
   const [sequenceSearch, setSequenceSearch] = useState('');
@@ -50,9 +50,9 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
 
   const customTooltipStyle = {
     backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '16px',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+    border: '1px solid #f1f5f9',
+    borderRadius: '12px',
+    boxShadow: '0 4px 20px -4px rgba(203,213,225,0.4)',
     padding: '12px'
   };
 
@@ -64,7 +64,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
         <div className="lg:col-span-2 polaris-glass p-8 group">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
-              <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-ping"></div>
+              <div className="w-1.5 h-1.5 bg-blue-700 rounded-full animate-ping"></div>
               <span className="tech-label-light">Densidad de Flujo Temporal</span>
             </div>
           </div>
@@ -77,20 +77,20 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
                   dataKey="hora" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8', fontFamily: 'Inter'}}
+                  tick={{fontSize: 10, fontWeight: '900', fill: '#94a3b8', fontFamily: 'Inter'}}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8', fontFamily: 'Inter'}}
+                  tick={{fontSize: 10, fontWeight: '900', fill: '#94a3b8', fontFamily: 'Inter'}}
                 />
                 <Tooltip 
                   contentStyle={customTooltipStyle}
-                  itemStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: '#4f46e5'}}
+                  itemStyle={{fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', color: '#1d4ed8'}}
                   labelStyle={{color: '#1e293b', marginBottom: '8px', fontSize: '11px', fontWeight: '900'}}
                 />
-                <Legend iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '20px', letterSpacing: '0.1em'}} />
-                <Line type="monotone" dataKey="ingresos" stroke="#4f46e5" strokeWidth={4} dot={{r: 0}} activeDot={{r: 6, strokeWidth: 0, fill: '#4f46e5'}} />
+                <Legend iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px', letterSpacing: '0.1em'}} />
+                <Line type="monotone" dataKey="ingresos" stroke="#1d4ed8" strokeWidth={4} dot={{r: 0}} activeDot={{r: 6, strokeWidth: 0, fill: '#1d4ed8'}} />
                 <Line type="monotone" dataKey="salidas" stroke="#e2e8f0" strokeWidth={2} dot={{r: 0}} activeDot={{r: 6, strokeWidth: 0, fill: '#94a3b8'}} />
               </LineChart>
             </ResponsiveContainer>
@@ -115,7 +115,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
                   ))}
                 </Pie>
                 <Tooltip contentStyle={customTooltipStyle} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: '900', textTransform: 'uppercase'}} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -133,20 +133,20 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}}
+                tick={{fontSize: 10, fontWeight: '900', fill: '#94a3b8'}}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{fontSize: 10, fontWeight: 'bold', fill: '#94a3b8'}}
+                tick={{fontSize: 10, fontWeight: '900', fill: '#94a3b8'}}
               />
               <Tooltip 
                 cursor={{fill: '#f8fafc'}}
                 contentStyle={customTooltipStyle}
               />
-              <Legend iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '20px'}} />
-              <Bar dataKey="ingresos" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={24} />
-              <Bar dataKey="salidas" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={24} />
+              <Legend iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
+              <Bar dataKey="ingresos" fill="#1d4ed8" radius={[4, 4, 0, 0]} barSize={24} />
+              <Bar dataKey="salidas" fill="#e2e8f0" radius={[4, 4, 0, 0]} barSize={24} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -180,7 +180,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
                       return (
                         <div 
                           key={i}
-                          className={`aspect-square rounded-md transition-all duration-300 hover:scale-[1.4] hover:z-10 shadow-sm border border-slate-100 ${isActive ? 'bg-primary-500' : 'bg-slate-50'}`}
+                          className={`aspect-square rounded-md transition-all duration-300 hover:scale-[1.4] hover:z-10 shadow-sm border border-slate-100 ${isActive ? 'bg-blue-700' : 'bg-slate-50'}`}
                           style={{ opacity: isActive ? intensity : 1 }}
                           title={`${row.fecha} ${i}:00 - ${val} UNIDADES`}
                         />
@@ -199,13 +199,13 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <span className="tech-label-light">Ráfagas de Señal por Usuario</span>
           <div className="relative w-full md:w-80 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary-500 transition-colors" size={14} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-700 transition-colors" size={14} />
             <input 
               type="text"
               placeholder="Buscar ráfaga..."
               value={sequenceSearch}
               onChange={(e) => setSequenceSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:outline-none focus:border-primary-500/50 transition-all text-slate-700"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-700/10 transition-all text-slate-800"
             />
           </div>
         </div>
@@ -218,18 +218,18 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
                 <span className="text-[9px] font-bold text-slate-300 bg-slate-50 px-3 py-1 rounded-full">UID: {user.id}</span>
               </div>
               <div className="h-2 w-full flex items-center relative bg-slate-50 rounded-full overflow-hidden">
-                {user.eventos.map((evt: any, i: number) => {
-                  const time = new Date(evt.t);
-                  const percentage = ((time.getHours() * 60 + time.getMinutes()) / 1440) * 100;
-                  return (
-                    <div 
-                      key={i}
-                      className={`absolute w-1 h-full rounded-full transition-all hover:scale-y-[2] ${evt.tipo === 1 ? 'bg-primary-500' : 'bg-secondary-500 opacity-40'}`}
-                      style={{ left: `${percentage}%` }}
-                      title={`${evt.label} - ${evt.t}`}
-                    />
-                  );
-                })}
+                  {user.eventos.map((evt: any, i: number) => {
+                    const time = new Date(evt.t);
+                    const percentage = ((time.getHours() * 60 + time.getMinutes()) / 1440) * 100;
+                    return (
+                      <div 
+                        key={i}
+                        className={`absolute w-1 h-full rounded-full transition-all hover:scale-y-[2] ${evt.tipo === 1 ? 'bg-blue-700' : 'bg-emerald-500 opacity-40'}`}
+                        style={{ left: `${percentage}%` }}
+                        title={`${evt.label} - ${evt.t}`}
+                      />
+                    );
+                  })}
               </div>
             </div>
           )) : (

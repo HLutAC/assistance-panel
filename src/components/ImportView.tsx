@@ -70,12 +70,12 @@ const ImportView: React.FC = () => {
           onDragLeave={handleDrag} 
           onDrop={handleDrop}
           className={`relative border-2 border-dashed rounded-3xl p-16 transition-all duration-700 flex flex-col items-center justify-center space-y-8 ${
-            dragActive ? 'border-primary-500 bg-primary-500/5' : 'border-slate-100 hover:border-slate-200 bg-white/30'
+            dragActive ? 'border-blue-700 bg-blue-700/5' : 'border-slate-100 hover:border-slate-200 bg-white/30'
           }`}
         >
           <input ref={inputRef} type="file" className="hidden" accept=".csv" onChange={handleChange} />
           
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-primary-500 shadow-xl shadow-primary-500/10 border border-slate-50">
+          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-blue-700 shadow-xl shadow-blue-900/10 border border-slate-50">
             {uploading ? (
               <RefreshCw className="animate-spin" size={40} />
             ) : file ? (
@@ -97,7 +97,7 @@ const ImportView: React.FC = () => {
                     type="button"
                     onClick={handleUpload}
                     disabled={uploading}
-                    className="px-10 py-3.5 bg-primary-500 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-primary-600 transition-all shadow-lg shadow-primary-500/20 active:scale-95 disabled:opacity-50"
+                    className="px-10 py-3.5 bg-blue-700 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 active:scale-95 disabled:opacity-50"
                   >
                     {uploading ? 'PROCESANDO...' : 'INICIAR SINCRONIZACIÓN'}
                   </button>
@@ -120,7 +120,7 @@ const ImportView: React.FC = () => {
 
         {status && (
           <div className={`mt-10 p-6 rounded-2xl flex items-center gap-4 border animate-in zoom-in-95 duration-500 ${
-            status.type === 'success' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-rose-50 border-rose-100 text-rose-700'
+            status.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-rose-50 border-rose-100 text-rose-700'
           }`}>
             {status.type === 'success' ? <FileCheck size={20} /> : <AlertCircle size={20} />}
             <span className="text-xs font-black uppercase tracking-tight">{status.msg}</span>

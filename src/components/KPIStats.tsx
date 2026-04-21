@@ -23,8 +23,9 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
       trend: summary?.eliminados ? `-${summary.eliminados} Depurados` : `+${((total / 30) | 0)}/D`,
       trendPositive: !summary?.eliminados,
       icon: Users,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50'
+      color: 'text-indigo-500',
+      bgColor: 'bg-indigo-50/50',
+      accentColor: 'bg-indigo-500'
     },
     {
       title: 'Flujo de Ingresos',
@@ -32,8 +33,9 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
       trend: 'Acceso Válido',
       trendPositive: true,
       icon: LogIn,
-      color: 'text-cyan-600',
-      bgColor: 'bg-cyan-50'
+      color: 'text-emerald-500',
+      bgColor: 'bg-emerald-50/50',
+      accentColor: 'bg-emerald-500'
     },
     {
       title: 'Registros de Salida',
@@ -41,8 +43,9 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
       trend: 'Salida Registrada',
       trendPositive: true,
       icon: LogOut,
-      color: 'text-rose-600',
-      bgColor: 'bg-rose-50'
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-50/50',
+      accentColor: 'bg-orange-500'
     },
     {
       title: 'Usuarios Únicos',
@@ -50,8 +53,9 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
       trend: 'Directorio Root',
       trendPositive: true,
       icon: UserCheck,
-      color: 'text-indigo-400',
-      bgColor: 'bg-indigo-50/50'
+      color: 'text-indigo-500',
+      bgColor: 'bg-indigo-50/50',
+      accentColor: 'bg-indigo-500'
     }
   ];
 
@@ -60,19 +64,19 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
       {stats.map((stat, idx) => (
         <div key={idx} className="polaris-card p-7 group">
           <div className="flex items-center justify-between mb-8">
-            <div className={`p-3 ${stat.bgColor} rounded-2xl ${stat.color} group-hover:scale-110 transition-transform duration-500 shadow-sm`}>
+            <div className={`p-3 ${stat.bgColor} rounded-2xl ${stat.color} group-hover:scale-110 transition-transform duration-500`}>
               <stat.icon size={20} />
             </div>
             <div className="flex flex-col items-end">
               <span className="tech-label-light">NODE_0{idx + 1}</span>
-              <div className="w-10 h-1 bg-slate-100 rounded-full overflow-hidden mt-1.5">
-                <div className="h-full bg-indigo-400 opacity-40" style={{ width: '100%' }}></div>
+              <div className="w-10 h-1 bg-slate-50 rounded-full overflow-hidden mt-1.5">
+                <div className={`h-full ${stat.accentColor} opacity-20`} style={{ width: '100%' }}></div>
               </div>
             </div>
           </div>
           
           <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{stat.title}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{stat.title}</span>
             <div className="flex items-baseline space-x-3">
               <h3 className="text-4xl font-black text-slate-800 tracking-tight leading-none">
                 {stat.value}
@@ -82,12 +86,12 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
 
           <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${stat.trendPositive ? 'bg-indigo-500' : 'bg-rose-500'} animate-pulse`}></div>
-              <span className={`text-[10px] font-bold uppercase tracking-tight ${stat.trendPositive ? 'text-indigo-600' : 'text-rose-600'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${stat.accentColor} animate-pulse`}></div>
+              <span className={`text-[10px] font-bold uppercase tracking-tight ${stat.color}`}>
                 {stat.trend}
               </span>
             </div>
-            <span className="text-[9px] font-black text-slate-200 uppercase">SYS_OK</span>
+            <span className="text-[9px] font-black text-slate-200 uppercase tracking-tighter">SYS_OK</span>
           </div>
         </div>
       ))}

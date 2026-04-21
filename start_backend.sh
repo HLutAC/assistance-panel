@@ -8,7 +8,9 @@ fi
 
 echo "Iniciando Backend FastAPI..."
 source ./venv/bin/activate
-export DB_HOST=$(pwd)/.pgdata/tmp
+export DB_HOST=$PWD/.pgdata/tmp
 
-# Iniciar FastAPI
+# Iniciar FastAPI (El trap asegura que al cerrar el script, se intente cerrar lo demás)
+# trap './stop_backend.sh' EXIT # Opcional: auto-stop al cerrar terminal
+
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload

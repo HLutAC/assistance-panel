@@ -88,8 +88,8 @@ const App: React.FC = () => {
   if (loading && !summary) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 space-y-6">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary-500 shadow-sm"></div>
-        <span className="tech-label-light animate-pulse">CARGANDO RECURSOS...</span>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-700 shadow-sm"></div>
+        <span className="text-[10px] font-black text-slate-400 tracking-[0.2em] animate-pulse">CARGANDO RECURSOS...</span>
       </div>
     );
   }
@@ -97,8 +97,8 @@ const App: React.FC = () => {
   return (
     <div className="polaris-container bg-slate-50/50">
       {/* Dynamic Background Accents */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-700/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
       {/* Main Navigation Dock */}
       <div className="nav-dock">
@@ -141,7 +141,7 @@ const App: React.FC = () => {
           {/* Polaris Header */}
           <div className="polaris-header">
             <div className="flex items-center space-x-5">
-              <div className="w-10 h-10 bg-primary-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary-500/20">
+              <div className="w-10 h-10 bg-blue-700 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
                 <span className="font-black text-lg">S</span>
               </div>
               <div>
@@ -157,7 +157,7 @@ const App: React.FC = () => {
             </div>
             <div className="text-right hidden md:block">
               <span className="tech-label-light">SISTEMA EN LÍNEA</span>
-              <p className="text-sm font-bold text-slate-500">{new Date().toLocaleDateString()} — {new Date().toLocaleTimeString()}</p>
+              <p className="text-sm font-bold text-slate-400">{new Date().toLocaleDateString()} — {new Date().toLocaleTimeString()}</p>
             </div>
           </div>
 
