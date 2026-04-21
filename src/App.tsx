@@ -13,7 +13,23 @@ const App: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
   const [personas, setPersonas] = useState<any>([]);
   const [personasClean, setPersonasClean] = useState<any>([]);
-  const [charts, setCharts] = useState<any>({ hourly: [], lane: [], pie: [], heatmap: [], sequence: [] });
+  const [charts, setCharts] = useState<{
+    hourly: any[];
+    lane: any[];
+    pie: any[];
+    heatmap: any[];
+    sequence: any[];
+    escuela: any[];
+    summary: any;
+  }>({
+    hourly: [],
+    lane: [],
+    pie: [],
+    heatmap: [],
+    sequence: [],
+    escuela: [],
+    summary: null
+  });
   const [loading, setLoading] = useState(true);
   
   // Pagination, Search & Size State
@@ -46,35 +62,48 @@ const App: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}&fecha=${fecha}`;
+        const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}&fecha=${fecha || ''}`;
         
-        const [summaryRes, personasRes, personasCleanRes, hourlyRes, laneRes, heatmapRes, sequenceRes] = await Promise.all([
-          fetch(`${API_BASE}/summary?fecha=${fecha}`),
+        const [
+          summaryRes, 
+          personasRes, 
+          personasCleanRes, 
+          hourlyData, 
+          laneData, 
+          pieData, 
+          heatmapData, 
+          sequenceData, 
+          escuelaData, 
+          summaryStats
+        ] = await Promise.all([
+          fetch(`${API_BASE}/summary?fecha=${fecha || ''}`),
           fetch(`${API_BASE}/personas?${queryParams}`),
           fetch(`${API_BASE}/personas?${queryParams}&clean=true`),
-          fetch(`${API_BASE}/charts/hourly?fecha=${fecha}`),
-          fetch(`${API_BASE}/charts/lane?fecha=${fecha}`),
-          fetch(`${API_BASE}/charts/heatmap?fecha=${fecha}`),
-          fetch(`${API_BASE}/charts/sequence`)
+          fetch(`${API_BASE}/charts/hourly?fecha=${fecha || ''}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/lane?fecha=${fecha || ''}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/pie?fecha=${fecha || ''}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/heatmap?fecha=${fecha || ''}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/sequence`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/escuela?fecha=${fecha || ''}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/summary-stats?fecha=${fecha || ''}`).then(r => r.json())
         ]);
 
         const summaryData = await summaryRes.json();
         const personasData = await personasRes.json();
         const personasCleanData = await personasCleanRes.json();
-        
+
         setSummary(summaryData);
         setPersonas(personasData.items);
         setPersonasClean(personasCleanData.items);
         setTotal(personasData.total);
-        setCharts({
-          hourly: await hourlyRes.json(),
-          lane: await laneRes.json(),
-          pie: [
-            { name: "Ingresos", value: summaryData.ingresos },
-            { name: "Salidas", value: summaryData.salidas }
-          ],
-          heatmap: await heatmapRes.json(),
-          sequence: await sequenceRes.json()
+        setCharts({ 
+          hourly: hourlyData, 
+          lane: laneData, 
+          pie: pieData, 
+          heatmap: heatmapData, 
+          sequence: sequenceData, 
+          escuela: escuelaData, 
+          summary: summaryStats 
         });
       } catch (error) {
         console.error("Error fetching data from API:", error);

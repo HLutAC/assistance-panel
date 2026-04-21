@@ -192,6 +192,28 @@ def get_lane_chart(fecha: Optional[str] = None):
     finally:
         cur.close(); conn.close()
 
+@app.get("/api/charts/pie")
+def get_pie_chart(fecha: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        params = [fecha] if fecha else []
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        base_query = f"""
+        WITH deduplicated AS (
+            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+            FROM eventos {date_filter}
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        cur.execute(f"SELECT COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d", params)
+        res = cur.fetchone()
+        return [
+            {"name": "Ingresos", "value": res['ingresos']},
+            {"name": "Salidas", "value": res['salidas']}
+        ]
+    finally:
+        cur.close(); conn.close()
+
 @app.get("/api/charts/heatmap")
 def get_heatmap_chart(fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -207,6 +229,59 @@ def get_heatmap_chart(fecha: Optional[str] = None):
         """
         cur.execute(f"SELECT timestamp::date::text as fecha, EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) as value FROM ({base_query}) as d GROUP BY fecha, hora ORDER BY fecha DESC, hora LIMIT 500;", params)
         return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/escuela")
+def get_escuela_chart(fecha: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        params = [fecha] if fecha else []
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        base_query = f"""
+        WITH deduplicated AS (
+            SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e {date_filter}
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        cur.execute(f"""
+            SELECT i.escuela as name, COUNT(*) as value 
+            FROM ({base_query}) as d 
+            JOIN integrantes i ON d.person_id = i.id 
+            WHERE i.escuela IS NOT NULL AND i.escuela != ''
+            GROUP BY i.escuela 
+            ORDER BY value DESC;
+        """, params)
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/summary-stats")
+def get_summary_stats(fecha: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        params = [fecha] if fecha else []
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        base_query = f"""
+        WITH deduplicated AS (
+            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+            FROM eventos {date_filter}
+        )
+        SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        """
+        # Peak Hour
+        cur.execute(f"SELECT EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) as count FROM ({base_query}) as d GROUP BY hora ORDER BY count DESC LIMIT 1", params)
+        peak = cur.fetchone()
+        
+        # Unique Users
+        cur.execute(f"SELECT COUNT(DISTINCT person_id) as count FROM ({base_query}) as d", params)
+        users = cur.fetchone()
+
+        return {
+            "peak_hour": f"{int(peak['hora'] or 0):02d}:00" if peak else "N/A",
+            "unique_users": users['count'] if users else 0
+        }
     finally:
         cur.close(); conn.close()
 

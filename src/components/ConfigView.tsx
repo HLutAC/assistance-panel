@@ -107,34 +107,6 @@ const ConfigView: React.FC = () => {
           </div>
         ))}
       </div>
-
-      {/* Network Blueprint Footer */}
-      <div className="polaris-glass p-10 overflow-hidden relative group">
-        <div className="absolute top-1/2 right-10 -translate-y-1/2 opacity-[0.03] group-hover:opacity-20 transition-opacity duration-1000 rotate-12">
-          <Network size={220} className="text-blue-700" />
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-2 h-2 bg-blue-700 rounded-full animate-ping"></div>
-            <span className="tech-label-light">INFRAESTRUCTURA_CORE_V2.5</span>
-          </div>
-          <h3 className="text-4xl font-black tracking-tight mb-6 text-slate-800">Topología de Red Resiliente</h3>
-          <p className="text-slate-500 text-sm font-bold max-w-4xl leading-loose uppercase tracking-wide">
-            SISTEMA DISTRIBUIDO EN SUBRED <span className="bg-slate-50 text-blue-700 px-3 py-1 rounded-lg border border-slate-100">172.18.7.0/24</span>. 
-            EL SERVIDOR CENTRAL ADMINISTRA EL FLUJO DE EVENTOS Y LA CONMUTACIÓN DE BARRERAS DE ACCESO PERIMETRAL MEDIANTE PROTOCOLOS ENCRIPTADOS_
-          </p>
-          <div className="mt-10 flex gap-10">
-            <div className="flex flex-col">
-              <span className="tech-label-light !text-[8px]">ESTADO ENCRIPTACIÓN</span>
-              <span className="text-xs font-black text-slate-700 mt-1">AES_256_ACTIVE</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="tech-label-light !text-[8px]">LATENCIA GATEWAY</span>
-              <span className="text-xs font-black text-blue-700 mt-1">&lt; 1.2MS_OPTIMO</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -241,18 +241,18 @@ const StudentCard: React.FC<StudentCardProps> = ({ row }) => {
         {/* Dual Stream Logs Flow for selected date */}
         <div className="flex-1">
           <div className="flex items-center justify-between mb-3 border-b border-slate-50 pb-2">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Bitácora // {activeDate}</span>
+            <span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.2em]">Bitácora // {activeDate}</span>
           </div>
           <div className="grid grid-cols-2 gap-6 h-[160px]">
             {/* Column 1: Ingresos (ASC) */}
             <div className="flex flex-col">
-              <span className="text-[8px] font-black text-emerald-500 uppercase mb-2 ml-1">Ingresos</span>
+              <span className="text-[11px] font-black text-emerald-500 uppercase mb-2 ml-1">Ingresos</span>
               <div className="space-y-1.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
                 {dayIngresos.length > 0 ? (
                   dayIngresos.sort((a: any, b: any) => a.Hora.localeCompare(b.Hora)).map((evt: any, i: any) => (
                     <div key={i} className="flex items-center justify-between p-2 bg-emerald-50/20 rounded-lg border border-emerald-100/30">
-                      <span className="text-[10px] font-mono font-black text-emerald-600">{evt.Hora.slice(0, 5)}</span>
-                      <span className="text-[8px] font-bold text-emerald-400">C{evt.Carril}</span>
+                      <span className="text-sm font-mono font-black text-emerald-600">{evt.Hora.slice(0, 5)}</span>
+                      <span className="text-[10px] font-bold text-emerald-400">C{evt.Carril}</span>
                     </div>
                   ))
                 ) : (
@@ -265,13 +265,13 @@ const StudentCard: React.FC<StudentCardProps> = ({ row }) => {
 
             {/* Column 2: Salidas (ASC) */}
             <div className="flex flex-col">
-              <span className="text-[8px] font-black text-slate-500 uppercase mb-2 ml-1">Salidas</span>
+              <span className="text-[11px] font-black text-slate-500 uppercase mb-2 ml-1">Salidas</span>
               <div className="space-y-1.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
                 {daySalidas.length > 0 ? (
                   daySalidas.sort((a: any, b: any) => a.Hora.localeCompare(b.Hora)).map((evt: any, i: any) => (
                     <div key={i} className="flex items-center justify-between p-2 bg-slate-50/50 rounded-lg border border-slate-100/50">
-                      <span className="text-[10px] font-mono font-black text-slate-500">{evt.Hora.slice(0, 5)}</span>
-                      <span className="text-[8px] font-bold text-slate-400">C{evt.Carril}</span>
+                      <span className="text-sm font-mono font-black text-slate-500">{evt.Hora.slice(0, 5)}</span>
+                      <span className="text-[10px] font-bold text-slate-400">C{evt.Carril}</span>
                     </div>
                   ))
                 ) : (
