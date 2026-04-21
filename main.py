@@ -312,6 +312,38 @@ def get_personas(
     finally:
         cur.close(); conn.close()
 
+@app.put("/api/personas/{id_persona}")
+def update_persona(id_persona: int, data: dict):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        nombre = data.get('Nombre')
+        escuela = data.get('escuela')
+        
+        if not nombre or not escuela:
+            raise HTTPException(status_code=400, detail="Nombre y Escuela son requeridos")
+            
+        cur.execute("UPDATE integrantes SET nombre = %s, escuela = %s WHERE id_persona = %s", (nombre, escuela, id_persona))
+        conn.commit()
+        return {"status": "success"}
+    finally:
+        cur.close(); conn.close()
+
+@app.post("/api/personas/normalize-escuela")
+def normalize_escuela(data: dict):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        old_name = data.get('old_name')
+        new_name = data.get('new_name')
+        
+        if not old_name or not new_name:
+            raise HTTPException(status_code=400, detail="old_name y new_name son requeridos")
+            
+        cur.execute("UPDATE integrantes SET escuela = %s WHERE escuela = %s", (new_name, old_name))
+        conn.commit()
+        return {"status": "success", "updated_count": cur.rowcount}
+    finally:
+        cur.close(); conn.close()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

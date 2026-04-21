@@ -14,13 +14,17 @@
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: light !important;
   }
 
   body {
-    @apply bg-slate-50 text-slate-800 font-sans antialiased overflow-hidden m-0;
+    background-color: #030712 !important;
+    @apply text-slate-800 font-sans antialiased overflow-hidden m-0;
     -webkit-font-smoothing: antialiased;
-    background-image: none; /* Eliminar gradientes intrusivos del fondo */
+    background-image: 
+      radial-gradient(circle at 10% 10%, rgba(29, 78, 216, 0.15) 0%, transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(249, 115, 22, 0.1) 0%, transparent 40%) !important;
+    background-attachment: fixed;
   }
 }
 
@@ -30,7 +34,12 @@
   }
 
   .polaris-glass {
-    @apply bg-white/80 backdrop-blur-md border border-slate-100 shadow-[0_4px_20px_-4px_rgba(203,213,225,0.4)] relative transition-all duration-500 rounded-3xl;
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    position: relative;
+    transition: all 0.5s;
+    border-radius: 2rem;
   }
 
   .polaris-header {

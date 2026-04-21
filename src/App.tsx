@@ -4,6 +4,7 @@ import DataTable from './components/DataTable';
 import AnalyticsView from './components/AnalyticsView';
 import ImportView from './components/ImportView';
 import ConfigView from './components/ConfigView';
+import EditView from './components/EditView';
 
 const API_BASE = "http://localhost:8000/api";
 
@@ -132,6 +133,12 @@ const App: React.FC = () => {
         >
           SISTEMA
         </div>
+        <div 
+          onClick={() => setActiveTab('gestion')}
+          className={`nav-item ${activeTab === 'gestion' ? 'active' : ''}`}
+        >
+          GESTIÓN
+        </div>
       </div>
 
       {/* Primary Application Stage */}
@@ -152,6 +159,7 @@ const App: React.FC = () => {
                   {activeTab === 'graficos' && 'Analítica Avanzada'}
                   {activeTab === 'importar' && 'Motor de Ingesta'}
                   {activeTab === 'configuracion' && 'Configuración de Nodos'}
+                  {activeTab === 'gestion' && 'Gestión y Normalización'}
                 </h1>
               </div>
             </div>
@@ -210,6 +218,8 @@ const App: React.FC = () => {
               <ImportView />
             ) : activeTab === 'configuracion' ? (
               <ConfigView />
+            ) : activeTab === 'gestion' ? (
+              <EditView />
             ) : null}
           </div>
         </div>
