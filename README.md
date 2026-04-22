@@ -1,86 +1,37 @@
-# SmartAccess Reporting Framework
+# SmartAccess
 
-Plataforma profesional de análisis y gestión de reportes para sistemas de control de acceso. Este framework transforma registros crudos (CSV) en información analítica de alta fidelidad, respaldada por una arquitectura de base de datos relacional para escalabilidad a largo plazo.
+Dashboard de monitoreo y gestión para dispositivos de control de acceso.
 
-## Características principales
+Este proyecto nació de la necesidad de centralizar y limpiar los registros (logs) que exportan los equipos de control de acceso (como barreras vehiculares y lectores faciales). El software de fábrica suele entregar archivos CSV difíciles de analizar de un vistazo, así que construimos este panel para procesar esos datos, guardarlos de forma estructurada y visualizarlos de manera clara.
 
-### KPIs en Tiempo Real
-Visualización instantánea de ingresos, salidas y usuarios únicos, servidos directamente desde PostgreSQL.
+### Qué hace el proyecto
+- **Ingesta de datos**: Subes un CSV exportado del equipo y el sistema lo procesa, elimina duplicados (ruido de señal) y lo guarda en una base de datos local.
+- **Visualización en tiempo real**: Un dashboard con el conteo de ingresos, salidas y usuarios activos del día.
+- **Analíticas**: Gráficos de flujo por hora, uso de carriles, distribución por carrera/facultad y mapas de calor operativos para identificar horas pico.
+- **Monitoreo de red**: Verifica si los dispositivos están en línea (online/offline) mediante consultas de red simples.
+- **Gestión de datos**: Una sección para corregir tildes, espacios o errores tipográficos en los nombres de carreras y estudiantes.
 
-### Suite Analítica Avanzada
-- **Flujo Horario**: Comparativa de ingresos vs salidas por hora.
-- **Uso de Carriles**: Distribución de carga por punto de acceso.
-- **Mapas de Calor**: Análisis de intensidad temporal (Hora vs Día).
-- **Secuencias Individuales**: Seguimiento cronológico para auditorías detalladas.
+### Tecnologías
+- **Frontend**: React con Vite y Tailwind CSS v4. Usamos Recharts para los gráficos y Lucide para la iconografía.
+- **Backend**: FastAPI (Python) para los endpoints y el procesamiento de archivos.
+- **Base de datos**: PostgreSQL para el almacenamiento persistente.
 
-### Fidelidad de Datos Dual
-- **Resumen Ejecutivo**: Datos limpios y deduplicados para métricas operativas.
-- **Bitácora de Auditoría**: Transparencia total con registros crudos sin procesar.
+### Cómo ejecutarlo
+1. **Requisitos**: Python 3.10+ y Node.js.
+2. **Setup del Backend**:
+   - Instala las dependencias: `pip install fastapi uvicorn psycopg2-binary python-dotenv requests`
+   - Inicia el servidor: `python main.py` (escucha en el puerto 8000).
+3. **Setup del Frontend**:
+   - Instala los paquetes: `npm install`
+   - Inicia el proyecto: `npm run dev` (abre `localhost:5173` en tu navegador).
 
----
+### Notas y limitaciones
+- El procesador de datos está optimizado para el formato de exportación de eventos de dispositivos Hikvision.
+- Aplicamos un filtro de "limpieza" que ignora registros repetidos de una misma persona en un intervalo de 5 minutos para evitar inflar las estadísticas.
+- La base de datos se guarda por defecto en una carpeta local `.pgdata` (asegúrate de que esté en tu `.gitignore`).
 
-## Arquitectura
+### Estado
+El proyecto es funcional y estable para el uso diario. Todavía hay margen de mejora en el rendimiento cuando se cargan archivos con cientos de miles de registros a la vez, pero para el flujo normal de una institución funciona perfectamente.
 
-El sistema utiliza un stack moderno diseñado para manejar años de historial de logs:
-
-1.  **Base de Datos**: PostgreSQL 16 (Instancia local aislada).
-2.  **Backend API**: FastAPI (Motores de agregación SQL nativos).
-3.  **Frontend**: React + TypeScript + Tailwind CSS (Vite).
-4.  **Ingesta**: Python 3 con lógica de `UPSERT` incremental.
-
----
-
-## Instalación y Configuración
-
-### 1. Requisitos
-- Python 3.10+
-- Node.js & npm
-- PostgreSQL (Cliente `psql` disponible en el sistema)
-
-### 2. Configuración Inicial
-Asegúrate de tener los archivos `.env` y `config.json` configurados en la raíz. El sistema inicializará su propia base de datos local en la primera ejecución.
-
----
-
-## Uso Operativo
-
-### Método A: Ingesta desde el Dashboard (Recomendado)
-1. Ve a la pestaña **"Importar Datos"**.
-2. Arrastra tu archivo `Transacciones_*.csv` o selecciónalo desde tu equipo.
-3. Haz clic en **"Iniciar Sincronización"**. El sistema actualizará PostgreSQL al instante.
-
-### Método B: Ingesta Manual (Terminal)
-Coloca tus archivos `Transacciones_*.csv` en la raíz y ejecuta:
-```bash
-./venv/bin/python data_processor.py
-```
-
-### Paso 2: Iniciar Servicios
-Para levantar la base de datos y la API:
-```bash
-./start_backend.sh
-```
-
-### Paso 3: Visualizar Dashboard
-En otra terminal, inicia la interfaz de usuario:
-```bash
-npm run dev
-```
-
----
-
-## Escalabilidad
-
-Gracias a la migración a **PostgreSQL**, el sistema está preparado para:
-- **Almacenamiento**: Millones de registros históricos.
-- **Velocidad**: Consultas indexadas y paginación en servidor.
-- **Integridad**: Prevención de duplicados mediante claves únicas compuestas.
-
----
-
-## Stack Tecnológico
-- **Core**: React, TypeScript, Vite.
-- **Estilos**: Tailwind CSS v4.
-- **Gráficos**: Recharts.
-- **Backend**: FastAPI, SQLAlchemy, Psycopg2.
-- **Base de Datos**: PostgreSQL.
+### Licencia
+Uso libre para fines académicos y personales.
