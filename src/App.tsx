@@ -5,6 +5,7 @@ import AnalyticsView from './components/AnalyticsView';
 import ImportView from './components/ImportView';
 import ConfigView from './components/ConfigView';
 import EditView from './components/EditView';
+import ReportView from './components/ReportView';
 
 const API_BASE = "http://localhost:8000/api";
 
@@ -168,6 +169,12 @@ const App: React.FC = () => {
         >
           GESTIÓN
         </div>
+        <div 
+          onClick={() => setActiveTab('reporte')}
+          className={`nav-item ${activeTab === 'reporte' ? 'active' : ''}`}
+        >
+          REPORTE
+        </div>
       </div>
 
       {/* Primary Application Stage */}
@@ -189,6 +196,7 @@ const App: React.FC = () => {
                   {activeTab === 'importar' && 'Motor de Ingesta'}
                   {activeTab === 'configuracion' && 'Configuración de Nodos'}
                   {activeTab === 'gestion' && 'Gestión y Normalización'}
+                  {activeTab === 'reporte' && 'Generación de Reportes'}
                 </h1>
               </div>
             </div>
@@ -249,6 +257,12 @@ const App: React.FC = () => {
               <ConfigView />
             ) : activeTab === 'gestion' ? (
               <EditView />
+            ) : activeTab === 'reporte' ? (
+              <ReportView 
+                summary={summary} 
+                charts={charts} 
+                selectedDate={fecha} 
+              />
             ) : null}
           </div>
         </div>

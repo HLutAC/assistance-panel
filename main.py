@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 import requests
 from requests.auth import HTTPDigestAuth
+import socket
 
 # Cargar configuración de dispositivos desde JSON
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "devices.json")
@@ -83,8 +84,6 @@ def get_escuelas():
     finally:
         cur.close(); conn.close()
 
-import socket
-
 @app.get("/api/devices/status")
 def get_devices_status():
     status = {}
@@ -102,11 +101,25 @@ def get_devices_status():
         status[ip] = "online" if is_online else "offline"
     return status
 
+@app.get("/api/devices/proxy/{ip}")
+def device_proxy(ip: str, user: str = Query(...), password: str = Query(...)):
+    """
+    Checks if device is reachable with provided credentials.
+    """
+    try:
+        url = f"http://{ip}/ISAPI/System/deviceInfo"
+        response = requests.get(url, auth=requests.auth.HTTPBasicAuth(user, password), timeout=5)
+        if response.status_code == 200:
+            return {"status": "authenticated", "data": "Handshake OK"}
+        else:
+            return {"status": "failed", "code": response.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/api/summary")
 def get_summary(fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        # Use parametrized query for safety even in date_filter
         params = []
         if fecha:
             date_filter = "WHERE timestamp::date = %s"
@@ -295,7 +308,6 @@ def get_sequence_chart():
             uid = row['person_id']
             cur.execute("SELECT nombre, apellido FROM integrantes WHERE id = %s", (uid,))
             user = cur.fetchone()
-            # En la secuencia individual TAMBIÉN aplicamos la limpieza de 5 minutos para que sea consistente con el resumen
             base_query = """
             WITH deduplicated AS (
                 SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
@@ -322,7 +334,6 @@ def get_personas(
 ):
     offset = (page - 1) * size; conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        # Construcción dinámica de filtros
         query_parts = []
         params = []
         
@@ -342,15 +353,12 @@ def get_personas(
         if query_parts:
             filter_sql = "WHERE " + " AND ".join(query_parts)
             
-        # Obtener el total para paginación
         cur.execute(f"SELECT COUNT(*) as total FROM integrantes {filter_sql}", params)
         total = cur.fetchone()['total']
         
-        # Obtener la lista de personas
         cur.execute(f"SELECT id as \"ID\", nombre as \"Nombre\", apellido as \"Apellido\", escuela as \"escuela\" FROM integrantes {filter_sql} ORDER BY id ASC LIMIT %s OFFSET %s", (*params, size, offset))
         personas = cur.fetchall()
         
-        # Para cada persona, obtener sus eventos
         for p in personas:
             events_source = "eventos"
             date_filter = ""
@@ -371,11 +379,9 @@ def get_personas(
             else:
                 events_source = f"(SELECT * FROM eventos WHERE person_id = %s {date_filter})"
             
-            # Reconstruct query
             cur.execute(f"SELECT timestamp::date::text as f, timestamp::time::text as \"Hora\", tipo_movimiento as \"Movimiento\", carril as \"Carril\" FROM {events_source} as e ORDER BY timestamp DESC, id DESC", event_params)
             evts = cur.fetchall()
             
-            # Agrupar por fecha para el frontend
             grouped = {}
             for e in evts:
                 d = e['f']
