@@ -73,14 +73,6 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts }) => {
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Usuarios Únicos</span>
           <h2 className="text-3xl font-black text-slate-800 mt-4">{safeCharts.summary.unique_users}</h2>
         </div>
-        <div className="polaris-card p-6 flex flex-col justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Eficiencia de Nodo</span>
-          <h2 className="text-3xl font-black text-emerald-500 mt-4">98.2%</h2>
-        </div>
-        <div className="polaris-card p-6 flex flex-col justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Alertas Activas</span>
-          <h2 className="text-3xl font-black text-slate-300 mt-4">0</h2>
-        </div>
       </div>
 
       {/* 1. Flow Density & Career Distribution */}
