@@ -667,6 +667,71 @@ def archive_old_data():
     finally:
         cur.close(); conn.close()
 
+@app.get("/api/reports/individual")
+def get_individual_report(person_id: str, fecha: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute("SELECT id, nombre, apellido, escuela FROM integrantes WHERE id = %s", (person_id,))
+        person = cur.fetchone()
+        if not person:
+            return {"error": "Persona no encontrada"}
+        
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = [person_id]
+        if fecha: params.append(fecha)
+        
+        # Stats
+        cur.execute(f"SELECT tipo_movimiento, COUNT(*) as total FROM eventos WHERE person_id = %s {date_filter} GROUP BY tipo_movimiento", params)
+        stats_raw = cur.fetchall()
+        stats = {"ingresos": 0, "salidas": 0}
+        for s in stats_raw:
+            if s['tipo_movimiento'] == 'INGRESO': stats['ingresos'] = s['total']
+            if s['tipo_movimiento'] == 'SALIDA': stats['salidas'] = s['total']
+            
+        # Events (deduplicated)
+        query = f"""
+            WITH deduplicated AS (
+                SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
+                FROM eventos WHERE person_id = %s {date_filter}
+            )
+            SELECT person_id, tipo_movimiento, carril, timestamp::text as t
+            FROM deduplicated
+            WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+            ORDER BY timestamp DESC
+        """
+        cur.execute(query, params)
+        events = cur.fetchall()
+        
+        return {"person": person, "stats": stats, "events": events}
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/reports/global-events")
+def get_global_report_events(fecha: Optional[str] = None, limit: int = 200):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        params = [fecha] if fecha else []
+        
+        query = f"""
+            WITH deduplicated AS (
+                SELECT e.*, i.nombre, i.apellido, 
+                       LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+                FROM eventos e
+                LEFT JOIN integrantes i ON e.person_id = i.id
+                {date_filter}
+            )
+            SELECT person_id, nombre, apellido, tipo_movimiento, carril, timestamp::text as t
+            FROM deduplicated
+            WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+            ORDER BY timestamp DESC
+            LIMIT %s
+        """
+        cur.execute(query, (*params, limit))
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

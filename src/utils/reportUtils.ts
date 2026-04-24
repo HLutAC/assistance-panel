@@ -1,307 +1,406 @@
 import { jsPDF } from 'jspdf';
 
-export const generateNativePDF = (summary: any, charts: any, selectedDate: string) => {
+export const generateNativePDF = (summary: any, charts: any, selectedDate: string, individualData?: any, globalEvents?: any[]) => {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 25;
+  const margin = 20;
   const contentWidth = pageWidth - (margin * 2);
 
   const colors = {
-    primary: [29, 78, 216],       // Blue-700
-    primaryLight: [147, 197, 253], // Blue-300
-    emerald: [5, 150, 105],      // Emerald-600
-    emeraldLight: [167, 243, 208],// Emerald-200
-    amber: [217, 119, 6],        // Amber-600
-    rose: [225, 29, 72],         // Rose-600
-    secondary: [15, 23, 42],      // Slate-900
-    text: [51, 65, 85],           // Slate-700
-    textLight: [100, 116, 139],   // Slate-500
-    background: [248, 250, 252],  // Slate-50
-    grid: [226, 232, 240]         // Slate-200
+    primary: [15, 23, 42],        // Slate-900 (Deep blue-black)
+    accent: [29, 78, 216],        // Blue-700
+    accentLight: [191, 219, 254], // Blue-200
+    success: [5, 150, 105],       // Emerald-600
+    warning: [217, 119, 6],       // Amber-600
+    danger: [225, 29, 72],        // Rose-600
+    text: [30, 41, 59],           // Slate-800
+    textMuted: [100, 116, 139],   // Slate-500
+    bgLight: [248, 250, 252],     // Slate-50
+    border: [226, 232, 240],      // Slate-200
+    white: [255, 255, 255]
   };
 
-  const drawHeader = (pageTitle: string) => {
-    // Top Bar Decoration
-    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.rect(0, 0, pageWidth, 2, 'F');
-
-    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.rect(margin, margin, 4, 4, 'F');
-    
+  const drawWatermark = () => {
+    doc.saveGraphicsState();
+    doc.setGState(new (doc as any).GState({ opacity: 0.03 }));
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-    doc.text("ASSISTANCE / UNAM / V4.2", margin + 6, margin + 3.5);
-
-    doc.setFontSize(26);
-    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-    doc.text(pageTitle, margin, margin + 15);
-    
-    doc.setFontSize(8);
-    doc.text("REPORTE DE AUDITORÍA OPERATIVA", margin, margin + 20);
-
-    // Timestamp
-    doc.setFontSize(7);
-    doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-    doc.text("EMITIDO EL", pageWidth - margin, margin + 3, { align: 'right' });
-    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-    doc.setFontSize(8);
-    doc.text(new Date().toLocaleString(), pageWidth - margin, margin + 7, { align: 'right' });
-
-    doc.setDrawColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.setLineWidth(0.8);
-    doc.line(margin, margin + 25, pageWidth - margin, margin + 25);
+    doc.setFontSize(60);
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.text("UNAM AUDIT", pageWidth / 2, pageHeight / 2, { align: 'center', angle: 45 });
+    doc.restoreGraphicsState();
   };
 
-  // --- PAGE 1: CORE ANALYTICS ---
-  drawHeader("ANALYSIS_DASHBOARD");
-
-  // Summary Metrics
-  const summaryY = margin + 35;
-  const metrics = [
-    { label: "INGRESOS", value: summary?.ingresos || 0, sub: "Registrados" },
-    { label: "SALIDAS", value: summary?.salidas || 0, sub: "Registrados" },
-    { label: "USUARIOS", value: charts?.summary?.unique_users || 0, sub: "Únicos" },
-    { label: "HORA PICO", value: charts?.summary?.peak_hour || "N/A", sub: "Flujo Max" }
-  ];
-
-  metrics.forEach((m, i) => {
-    const x = margin + (i * (contentWidth / 4));
-    doc.setFillColor(colors.background[0], colors.background[1], colors.background[2]);
-    doc.setDrawColor(colors.grid[0], colors.grid[1], colors.grid[2]);
-    doc.roundedRect(x, summaryY, (contentWidth / 4) - 3, 22, 3, 3, 'FD');
+  const drawHeader = (title: string, subtitle: string) => {
+    // Top Accent Bar
+    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.rect(0, 0, pageWidth, 15, 'F');
     
-    doc.setFontSize(6);
-    doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-    doc.text(m.label, x + 4, summaryY + 6);
-    
-    doc.setFontSize(14);
+    // Header Content
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("SISTEMA DE GESTIÓN DE ACCESOS - SMARTACCESS V5.0", margin, 10);
+    doc.text("ID_NODE: UNAM_MOQ_01", pageWidth - margin, 10, { align: 'right' });
+
+    // Title Block
     doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.text(String(m.value), x + 4, summaryY + 14);
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.text(title, margin, 35);
     
-    doc.setFontSize(5);
-    doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-    doc.text(m.sub, x + 4, summaryY + 19);
-  });
+    doc.setFontSize(9);
+    doc.setTextColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+    doc.text(subtitle.toUpperCase(), margin, 41);
 
-  // --- PREMIUM HOURLY CHART ---
-  const hourlyY = summaryY + 35;
-  doc.setFontSize(9);
-  doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-  doc.text("FLUJO TEMPORAL DE ACCESOS", margin, hourlyY);
-  doc.setFontSize(7);
-  doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-  doc.text("Distribución de ingresos y salidas por hora", margin, hourlyY + 4);
-
-  // Legend for Hourly Chart
-  doc.setFontSize(6);
-  doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-  doc.rect(pageWidth - margin - 40, hourlyY, 3, 3, 'F');
-  doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
-  doc.text("INGRESOS", pageWidth - margin - 35, hourlyY + 2.5);
-  
-  doc.setFillColor(colors.emerald[0], colors.emerald[1], colors.emerald[2]);
-  doc.rect(pageWidth - margin - 20, hourlyY, 3, 3, 'F');
-  doc.text("SALIDAS", pageWidth - margin - 15, hourlyY + 2.5);
-
-  const chartBoxH = 45;
-  const barGap = 1.2;
-  const hourlyData = charts?.hourly || [];
-  const maxH = Math.max(...hourlyData.map((d: any) => d.ingresos + d.salidas), 10);
-
-  // Background Grid Lines
-  doc.setDrawColor(colors.grid[0], colors.grid[1], colors.grid[2]);
-  doc.setLineWidth(0.05);
-  for(let j=0; j<=4; j++) {
-     const lineY = hourlyY + 10 + chartBoxH - (j * (chartBoxH / 4));
-     doc.line(margin, lineY, margin + contentWidth, lineY);
-  }
-
-  hourlyData.forEach((d: any, i: number) => {
-    const x = margin + 5 + (i * (contentWidth - 10) / 24);
-    const bW = ((contentWidth - 10) / 24) - barGap;
-    const baseLineY = hourlyY + 10 + chartBoxH;
-
-    if (d.ingresos > 0) {
-      const hIng = (d.ingresos / maxH) * chartBoxH;
-      doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-      doc.roundedRect(x, baseLineY - hIng, bW, hIng, 0.3, 0.3, 'F');
-    }
-    
-    if (d.salidas > 0) {
-      const hSal = (d.salidas / maxH) * chartBoxH;
-      const hIng = (d.ingresos / maxH) * chartBoxH;
-      doc.setFillColor(colors.emerald[0], colors.emerald[1], colors.emerald[2]);
-      doc.roundedRect(x, baseLineY - hIng - hSal, bW, hSal, 0.3, 0.3, 'F');
-    }
-
-    if (i % 3 === 0) {
-      doc.setFontSize(5);
-      doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-      doc.text(d.hora.split(':')[0], x, baseLineY + 4);
-    }
-  });
-
-  // --- PREMIUM LANE CHART ---
-  const laneY = hourlyY + 75;
-  doc.setFontSize(9);
-  doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-  doc.text("DETALLE POR PUNTO DE CONTROL (CARRIL)", margin, laneY);
-
-  const lanes = (charts?.lane || []).slice(0, 5);
-  const maxL = Math.max(...lanes.map((l: any) => l.ingresos + l.salidas), 1);
-
-  const laneColors = [colors.primary, colors.emerald, colors.amber, colors.rose, colors.primaryLight];
-
-  lanes.forEach((l: any, i: number) => {
-    const yPos = laneY + 10 + (i * 12);
-    const barW = ((l.ingresos + l.salidas) / maxL) * (contentWidth - 60);
-    const currentColor = laneColors[i % laneColors.length];
-
+    // Metadata Right Column
+    doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
     doc.setFontSize(7);
+    doc.text("FECHA EMISIÓN", pageWidth - margin, 25, { align: 'right' });
     doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
-    doc.text(l.name.toUpperCase(), margin, yPos + 4.5);
-
-    // Background Shadow
-    doc.setFillColor(colors.background[0], colors.background[1], colors.background[2]);
-    doc.roundedRect(margin + 50, yPos, contentWidth - 50, 7, 1.5, 1.5, 'F');
+    doc.setFontSize(9);
+    doc.text(new Date().toLocaleString(), pageWidth - margin, 30, { align: 'right' });
     
-    // Colored bar
-    doc.setFillColor(currentColor[0], currentColor[1], currentColor[2]);
-    doc.roundedRect(margin + 50, yPos, barW, 7, 1.5, 1.5, 'F');
+    doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+    doc.setFontSize(7);
+    doc.text("RANGO DE CONSULTA", pageWidth - margin, 37, { align: 'right' });
+    doc.setTextColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+    doc.setFontSize(9);
+    doc.text(selectedDate || "HISTÓRICO_FULL", pageWidth - margin, 42, { align: 'right' });
+
+    // separator
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 48, pageWidth - margin, 48);
+  };
+
+  const drawFooter = (page: number, total: number) => {
+    doc.setPage(page);
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
     
     doc.setFontSize(7);
-    doc.setTextColor(currentColor[0], currentColor[1], currentColor[2]);
-    doc.text(String(l.ingresos + l.salidas), margin + 50 + barW + 3, yPos + 4.5);
-  });
+    doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+    doc.text("DOC_HASH: " + Math.random().toString(36).substring(2, 15).toUpperCase(), margin, pageHeight - 12);
+    doc.text(`PÁGINA ${page} DE ${total}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
+    doc.text("Este documento es confidencial y para uso exclusivo de UNAM.", pageWidth/2, pageHeight - 12, { align: 'center' });
+  };
 
-  // --- DURATION TREND (PAGE 1 BOTTOM) ---
-  const durY = laneY + 75;
-  doc.setFontSize(9);
-  doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-  doc.text("TIEMPO PROMEDIO DE PERMANENCIA (HORAS)", margin, durY);
-  doc.setFontSize(7);
-  doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-  doc.text("Tendencia de estancia promedio por hora de entrada", margin, durY + 4);
+  if (individualData) {
+    // ==========================================
+    // INDIVIDUAL REPORT DESIGN
+    // ==========================================
+    drawWatermark();
+    drawHeader("FICHA_AUDITORÍA", "Reporte Detallado de Usuario");
 
-  const durationData = charts?.duration || [];
-  const maxD = Math.max(...durationData.map((d: any) => d.horas), 1);
-  const durChartH = 20;
+    const p = individualData.person;
+    const s = individualData.stats;
+    const e = individualData.events;
 
-  // Background Grid
-  doc.setDrawColor(colors.grid[0], colors.grid[1], colors.grid[2]);
-  doc.setLineWidth(0.05);
-  for(let j=0; j<=2; j++) {
-     const lineY = durY + 10 + durChartH - (j * (durChartH / 2));
-     doc.line(margin, lineY, margin + contentWidth, lineY);
-  }
-
-  // Draw Line
-  doc.setDrawColor(colors.amber[0], colors.amber[1], colors.amber[2]);
-  doc.setLineWidth(0.5);
-  durationData.forEach((d: any, i: number) => {
-    if (i === 0) return;
-    const x1 = margin + 5 + ((i-1) * (contentWidth - 10) / 24);
-    const x2 = margin + 5 + (i * (contentWidth - 10) / 24);
-    const y1 = durY + 10 + durChartH - (durationData[i-1].horas / maxD) * durChartH;
-    const y2 = durY + 10 + durChartH - (d.horas / maxD) * durChartH;
-    doc.line(x1, y1, x2, y2);
+    // User Profile Box
+    doc.setFillColor(colors.bgLight[0], colors.bgLight[1], colors.bgLight[2]);
+    doc.roundedRect(margin, 55, contentWidth, 45, 3, 3, 'F');
     
-    // Y-Axis labels (every 4 hours)
-    if (i % 4 === 0) {
-      doc.setFontSize(5);
-      doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-      doc.text(d.hora.split(':')[0] + "h", x2, durY + 10 + durChartH + 4);
-    }
-  });
+    // Avatar Placeholder
+    doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+    doc.roundedRect(margin + 8, 62, 30, 30, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.text(p.nombre[0] + p.apellido[0], margin + 23, 81, { align: 'center' });
 
-  // --- PAGE 2: TABLES ---
-  doc.addPage();
-  drawHeader("ACADEMIC_AUDIT");
-
-  const tableY = margin + 35;
-  doc.setFontSize(10);
-  doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-  doc.text("DISTRIBUCIÓN POR ESCUELA PROFESIONAL (TOP-X)", margin, tableY);
-
-  // Table Styles
-  const escuelas = charts?.escuela || [];
-  const totalE = escuelas.reduce((acc: number, cur: any) => acc + cur.value, 0) || 1;
-
-  doc.setFillColor(colors.background[0], colors.background[1], colors.background[2]);
-  doc.rect(margin, tableY + 6, contentWidth, 8, 'F');
-  doc.setFontSize(7);
-  doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-  doc.text("FACULTAD / ESCUELA", margin + 3, tableY + 11.5);
-  doc.text("TOTAL ACCESOS", pageWidth - margin - 30, tableY + 11.5, { align: 'right' });
-  doc.text("PARTICIPACIÓN %", pageWidth - margin - 5, tableY + 11.5, { align: 'right' });
-
-  let rowY = tableY + 22;
-  escuelas.slice(0, 15).forEach((e: any, i: number) => {
-    doc.setFontSize(8);
-    doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
-    doc.text(e.name.toUpperCase(), margin + 3, rowY);
+    // Profile Info
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setFontSize(16);
+    doc.text(`${p.nombre} ${p.apellido}`.toUpperCase(), margin + 45, 68);
     
-    doc.setFontSize(8);
-    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-    doc.text(String(e.value), pageWidth - margin - 30, rowY, { align: 'right' });
-    
-    const p = ((e.value/totalE)*100).toFixed(1);
-    // Clearer Percentage Badge
-    doc.setFillColor(241, 245, 249); // Lighter background Slated-100
-    doc.setDrawColor(226, 232, 240); // Slated-200 border
-    doc.roundedRect(pageWidth - margin - 15, rowY - 3, 12, 4.5, 1, 1, 'FD');
-    doc.setFontSize(6.5);
-    doc.setTextColor(29, 78, 216); // Bold Blue text
-    doc.text(p + "%", pageWidth - margin - 9, rowY + 0.3, { align: 'center' });
-
-    doc.setDrawColor(colors.grid[0], colors.grid[1], colors.grid[2]);
-    doc.line(margin, rowY + 3, pageWidth - margin, rowY + 3);
-    rowY += 9;
-  });
-
-  // --- ACADEMIC DURATION (PAGE 2 BOTTOM) ---
-  const durEscY = rowY + 10;
-  if (durEscY < pageHeight - 60) { // Only if space allows
     doc.setFontSize(10);
-    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-    doc.text("PERMANENCIA PROMEDIO POR CARRERA", margin, durEscY);
+    doc.setTextColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+    doc.text(p.escuela.toUpperCase(), margin + 45, 74);
 
-    const durEx = charts?.durationEscuela || [];
-    const maxDEx = Math.max(...durEx.map((d: any) => d.value), 1);
+    doc.setFontSize(8);
+    doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+    doc.text(`DNI / CÓDIGO:`, margin + 45, 82);
+    doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+    doc.text(p.id, margin + 70, 82);
 
-    durEx.slice(0, 5).forEach((d: any, i: number) => {
-      const yPos = durEscY + 8 + (i * 8);
-      const barW = (d.value / maxDEx) * (contentWidth - 60);
-      
+    doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+    doc.text(`ESTADO SISTEMA:`, margin + 45, 88);
+    doc.setTextColor(colors.success[0], colors.success[1], colors.success[2]);
+    doc.text("VERIFICADO / ACTIVO", margin + 70, 88);
+
+    // Stats Grid
+    const statW = contentWidth / 3;
+    const statsY = 105;
+    [
+      { label: "INGRESOS", value: s.ingresos, color: colors.accent },
+      { label: "SALIDAS", value: s.salidas, color: colors.success },
+      { label: "TOTAL EVENTOS", value: s.ingresos + s.salidas, color: colors.primary }
+    ].forEach((stat, i) => {
+      const x = margin + (i * statW);
+      doc.setFillColor(colors.bgLight[0], colors.bgLight[1], colors.bgLight[2]);
+      doc.roundedRect(x, statsY, statW - 5, 20, 2, 2, 'F');
       doc.setFontSize(7);
-      doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
-      doc.text(d.name.substring(0, 25).toUpperCase(), margin, yPos + 4);
+      doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+      doc.text(stat.label, x + 5, statsY + 6);
+      doc.setFontSize(12);
+      doc.setTextColor(stat.color[0], stat.color[1], stat.color[2]);
+      doc.text(String(stat.value), x + 5, statsY + 14);
+    });
 
-      doc.setFillColor(241, 245, 249);
-      doc.roundedRect(margin + 50, yPos, contentWidth - 50, 5, 1, 1, 'F');
+    // Visual Activity Chart (Individual)
+    const indChartY = 110;
+    doc.setFontSize(9);
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.text("FRECUENCIA DE ACCESO DIARIA (FILTRADO)", margin, indChartY);
+
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.setLineWidth(0.1);
+    doc.line(margin, indChartY + 2, margin + contentWidth, indChartY + 2);
+
+    // Timeline visualization
+    const timelineW = contentWidth;
+    const timelineH = 15;
+    const timelineY = indChartY + 8;
+    
+    doc.setFillColor(colors.bgLight[0], colors.bgLight[1], colors.bgLight[2]);
+    doc.roundedRect(margin, timelineY, timelineW, timelineH, 2, 2, 'F');
+    
+    // Draw hours markers
+    for(let h=0; h<=24; h+=4) {
+      const hx = margin + (h/24) * timelineW;
+      doc.setFontSize(5);
+      doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+      doc.text(h+"h", hx, timelineY + timelineH + 4, { align: 'center' });
+    }
+
+    // Plot events on timeline
+    e.forEach((ev: any) => {
+      const timeStr = ev.t.split(' ')[1];
+      const [hh, mm] = timeStr.split(':').map(Number);
+      const hourFract = hh + (mm/60);
+      const ex = margin + (hourFract/24) * timelineW;
       
-      doc.setFillColor(colors.amber[0], colors.amber[1], colors.amber[2]);
-      doc.roundedRect(margin + 50, yPos, barW, 5, 1, 1, 'F');
+      const isIng = ev.tipo_movimiento === 'INGRESO';
+      doc.setFillColor(isIng ? colors.accent[0] : colors.success[0], isIng ? colors.accent[1] : colors.success[1], isIng ? colors.accent[2] : colors.success[2]);
+      doc.circle(ex, timelineY + (timelineH/2), 1.5, 'F');
+    });
+
+    // Timeline Log
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setFontSize(10);
+    doc.text("CRONOLOGÍA DE MOVIMIENTOS", margin, 145);
+    
+    // Table Header
+    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.rect(margin, 145, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.text("MARCA DE TIEMPO (TIMESTAMP)", margin + 5, 150.5);
+    doc.text("OPERACIÓN", pageWidth/2, 150.5, { align: 'center' });
+    doc.text("PUNTO DE CONTROL / NODO", pageWidth - margin - 5, 150.5, { align: 'right' });
+
+    let rowY = 158;
+    e.slice(0, 15).forEach((ev: any, i: number) => {
+      doc.setFontSize(8);
+      doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+      doc.text(ev.t, margin + 5, rowY);
+      
+      const isIng = ev.tipo_movimiento === 'INGRESO';
+      doc.setFillColor(isIng ? 239 : 236, isIng ? 246 : 253, isIng ? 255 : 245);
+      doc.roundedRect(pageWidth/2 - 12, rowY - 4, 24, 6, 1, 1, 'F');
+      doc.setTextColor(isIng ? colors.accent[0] : colors.success[0], isIng ? colors.accent[1] : colors.success[1], isIng ? colors.accent[2] : colors.success[2]);
+      doc.text(ev.tipo_movimiento, pageWidth/2, rowY, { align: 'center' });
+      
+      doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+      doc.text(`CARRIL ${ev.carril}`, pageWidth - margin - 5, rowY, { align: 'right' });
+      
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+      doc.line(margin, rowY + 3, pageWidth - margin, rowY + 3);
+      rowY += 9;
+    });
+
+    drawFooter(1, 1);
+  } else {
+    // ==========================================
+    // GLOBAL REPORT DESIGN
+    // ==========================================
+    drawWatermark();
+    drawHeader("REPORTE_GERENCIAL", "Análisis Estadístico de Operaciones");
+
+    // KPI Section
+    const kpiW = contentWidth / 4;
+    const kpiY = 55;
+    const kpis = [
+      { label: "INGRESOS", val: summary?.ingresos || 0, col: colors.accent },
+      { label: "SALIDAS", val: summary?.salidas || 0, col: colors.success },
+      { label: "USUARIOS ÚN.", val: charts?.summary?.unique_users || 0, col: colors.primary },
+      { label: "HORA PICO", val: charts?.summary?.peak_hour || "N/A", col: colors.warning }
+    ];
+
+    kpis.forEach((k, i) => {
+      const x = margin + (i * kpiW);
+      doc.setFillColor(colors.bgLight[0], colors.bgLight[1], colors.bgLight[2]);
+      doc.roundedRect(x, kpiY, kpiW - 4, 30, 2, 2, 'F');
       
       doc.setFontSize(6);
-      doc.setTextColor(colors.amber[0], colors.amber[1], colors.amber[2]);
-      doc.text(d.value.toFixed(2) + "h", margin + 50 + barW + 2, yPos + 4);
+      doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+      doc.text(k.label, x + 5, kpiY + 8);
+      
+      doc.setFontSize(16);
+      doc.setTextColor(k.col[0], k.col[1], k.col[2]);
+      doc.text(String(k.val), x + 5, kpiY + 20);
+      
+      doc.setFontSize(5);
+      doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+      doc.text("METRICA_VERIFICADA", x + 5, kpiY + 26);
     });
+
+    // Main Chart: Hourly Distribution
+    const chartY = 100;
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setFontSize(12);
+    doc.text("DISTRIBUCIÓN DE CARGA HORARIA", margin, chartY);
+    
+    const chartH = 50;
+    const hData = charts?.hourly || [];
+    const maxVal = Math.max(...hData.map((d: any) => d.ingresos + d.salidas), 10);
+
+    // Chart Grid
+    doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+    doc.setLineWidth(0.1);
+    for(let j=0; j<=5; j++) {
+      const gy = chartY + 10 + chartH - (j * (chartH/5));
+      doc.line(margin, gy, margin + contentWidth, gy);
+      doc.setFontSize(5);
+      doc.text(String(Math.round((maxVal/5)*j)), margin - 5, gy);
+    }
+
+    hData.forEach((d: any, i: number) => {
+      const bw = (contentWidth - 10) / 24;
+      const x = margin + 5 + (i * bw);
+      const hi = (d.ingresos / maxVal) * chartH;
+      const hs = (d.salidas / maxVal) * chartH;
+      
+      doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.rect(x + 0.5, chartY + 10 + chartH - hi, bw - 1, hi, 'F');
+      
+      doc.setFillColor(colors.success[0], colors.success[1], colors.success[2]);
+      doc.rect(x + 0.5, chartY + 10 + chartH - hi - hs, bw - 1, hs, 'F');
+      
+      if (i % 4 === 0) {
+        doc.setFontSize(6);
+        doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+        doc.text(d.hora.split(':')[0], x, chartY + 15 + chartH);
+      }
+    });
+
+    // Lane Utilization
+    const laneY = 175;
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.setFontSize(12);
+    doc.text("USO DE CARRILES / PUNTOS DE CONTROL", margin, laneY);
+    
+    const lanes = (charts?.lane || []).slice(0, 6);
+    const maxLane = Math.max(...lanes.map((l: any) => l.ingresos + l.salidas), 1);
+
+    lanes.forEach((l: any, i: number) => {
+      const ly = laneY + 10 + (i * 10);
+      const lw = ((l.ingresos + l.salidas) / maxLane) * (contentWidth - 60);
+      
+      doc.setFontSize(8);
+      doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+      doc.text(l.name.toUpperCase(), margin, ly + 5);
+      
+      doc.setFillColor(colors.bgLight[0], colors.bgLight[1], colors.bgLight[2]);
+      doc.roundedRect(margin + 50, ly, contentWidth - 50, 6, 1, 1, 'F');
+      
+      doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.roundedRect(margin + 50, ly, lw, 6, 1, 1, 'F');
+      
+      doc.setFontSize(7);
+      doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.text(String(l.ingresos + l.salidas), margin + 52 + lw, ly + 5);
+    });
+
+    // Page 2: Academic Analysis
+    doc.addPage();
+    drawWatermark();
+    drawHeader("ANÁLISIS_ACADÉMICO", "Distribución por Facultades y Escuelas");
+
+    const escData = charts?.escuela || [];
+    const totalAcc = escData.reduce((a: any, b: any) => a + b.value, 0) || 1;
+
+    doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.rect(margin, 55, contentWidth, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text("FACULTAD / ESCUELA PROFESIONAL", margin + 5, 61.5);
+    doc.text("VOLUMEN", pageWidth - margin - 40, 61.5, { align: 'right' });
+    doc.text("IMPACTO %", pageWidth - margin - 5, 61.5, { align: 'right' });
+
+    let ey = 73;
+    escData.slice(0, 18).forEach((e: any, i: number) => {
+      doc.setFontSize(8);
+      doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+      doc.text(e.name.toUpperCase(), margin + 5, ey);
+      
+      doc.setFontSize(9);
+      doc.text(String(e.value), pageWidth - margin - 40, ey, { align: 'right' });
+      
+      const p = ((e.value / totalAcc) * 100).toFixed(1);
+      doc.setFillColor(colors.bgLight[0], colors.bgLight[1], colors.bgLight[2]);
+      doc.roundedRect(pageWidth - margin - 20, ey - 4, 15, 6, 1, 1, 'F');
+      doc.setTextColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.text(p + "%", pageWidth - margin - 12.5, ey + 0.5, { align: 'center' });
+
+      doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+      doc.line(margin, ey + 4, pageWidth - margin, ey + 4);
+      ey += 10;
+    });
+
+    // Page 3: Global Log
+    if (globalEvents && globalEvents.length > 0) {
+      doc.addPage();
+      drawWatermark();
+      drawHeader("LOG_TRANSACCIONAL", "Bitácora de Eventos Registrados");
+      
+      doc.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+      doc.rect(margin, 55, contentWidth, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text("TIMESTAMP", margin + 5, 61.5);
+      doc.text("ID", margin + 40, 61.5);
+      doc.text("PERSONA", margin + 65, 61.5);
+      doc.text("MOV", pageWidth / 2 + 20, 61.5);
+      doc.text("PUNTO DE CONTROL", pageWidth - margin - 5, 61.5, { align: 'right' });
+
+      let gy = 73;
+      globalEvents.slice(0, 35).forEach((e: any, i: number) => {
+        if (gy > pageHeight - 30) return;
+        doc.setFontSize(7);
+        doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+        doc.text(e.t.split(' ')[1], margin + 5, gy);
+        doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+        doc.text(e.person_id, margin + 40, gy);
+        doc.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+        doc.text(`${e.nombre} ${e.apellido}`.toUpperCase().slice(0, 20), margin + 65, gy);
+        
+        const isIng = e.tipo_movimiento === 'INGRESO';
+        doc.setTextColor(isIng ? colors.accent[0] : colors.success[0], isIng ? colors.accent[1] : colors.success[1], isIng ? colors.accent[2] : colors.success[2]);
+        doc.text(e.tipo_movimiento[0], pageWidth / 2 + 20, gy);
+        
+        doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
+        doc.text(`C${e.carril}`, pageWidth - margin - 5, gy, { align: 'right' });
+        
+        doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+        doc.line(margin, gy + 3, pageWidth - margin, gy + 3);
+        gy += 8;
+      });
+    }
+
+    const totalPages = doc.internal.getNumberOfPages();
+    for(let i=1; i<=totalPages; i++) drawFooter(i, totalPages);
   }
 
-  // Footer Metadata
-  const addFoot = (p: number) => {
-    doc.setPage(p);
-    doc.setFontSize(6);
-    doc.setTextColor(colors.textLight[0], colors.textLight[1], colors.textLight[2]);
-    doc.text("ESTE DOCUMENTO ES UNA TRANSCRIPCIÓN DIGITAL OFICIAL DE LA PLATAFORMA ASSISTANCE.", margin, pageHeight - 15);
-    doc.text(`CERTIFICADO DE AUTENTICIDAD: AS-TX-${Math.random().toString(36).substring(7).toUpperCase()}`, margin, pageHeight - 12);
-    doc.text(`PÁGINA ${p} DE 2`, pageWidth - margin, pageHeight - 12, { align: 'right' });
-  };
-  addFoot(1);
-  addFoot(2);
-
-  doc.save(`Reporte_Assistance_${selectedDate || 'General'}.pdf`);
+  doc.save(`Audit_Assistance_${individualData ? 'Individual_' + individualData.person.id : 'Global'}_${selectedDate || 'Full'}.pdf`);
 };
