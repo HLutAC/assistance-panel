@@ -72,9 +72,13 @@ const App: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        const today = new Date().toISOString().split('T')[0];
+        // Use 'today' as default for summary and charts if no date is selected
+        const summaryDate = fecha || today;
+        
         const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}&fecha=${fecha || ''}`;
         const analyticParams = new URLSearchParams({
-          fecha: fecha || '',
+          fecha: summaryDate,
           search: analyticsSearch
         }).toString();
         
@@ -94,7 +98,7 @@ const App: React.FC = () => {
           hourlyEscuelaData,
           durationHourlyEscuelaData
         ] = await Promise.all([
-          fetch(`${API_BASE}/summary?fecha=${fecha || ''}`),
+          fetch(`${API_BASE}/summary?fecha=${summaryDate}`),
           fetch(`${API_BASE}/personas?${queryParams}`),
           fetch(`${API_BASE}/personas?${queryParams}&clean=true`),
           fetch(`${API_BASE}/charts/hourly?${analyticParams}`).then(r => r.json()),
@@ -139,6 +143,10 @@ const App: React.FC = () => {
     };
 
     fetchData();
+
+    // Configurar auto-refresco cada 30 segundos para monitoreo en tiempo real
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, [activeTab, page, searchTerm, pageSize, escuela, fecha, analyticsSearch]);
 
   if (loading && !summary) {

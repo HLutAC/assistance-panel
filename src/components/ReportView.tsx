@@ -22,6 +22,8 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
   const [loadingStudent, setLoadingStudent] = useState(false);
   const [loadingGlobal, setLoadingGlobal] = useState(false);
 
+  const [dailySummary, setDailySummary] = useState<any>(null);
+
   // Fetch Global Events for the audit log
   useEffect(() => {
     const fetchGlobalEvents = async () => {
@@ -32,6 +34,16 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
         const res = await fetch(`http://${window.location.hostname}:8000/api/reports/global-events?${params.toString()}`);
         const data = await res.json();
         setGlobalEvents(data);
+        
+        // If no date is selected, fetch "Today" summary for the KPI part of the report
+        if (!selectedDate) {
+          const today = new Date().toISOString().split('T')[0];
+          const sumRes = await fetch(`http://${window.location.hostname}:8000/api/summary?fecha=${today}`);
+          const sumData = await sumRes.json();
+          setDailySummary(sumData);
+        } else {
+          setDailySummary(null);
+        }
       } catch (e) {
         console.error("Global Events Load Fail:", e);
       } finally {
@@ -68,7 +80,9 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
   const exportPDF = () => {
     setIsGenerating(true);
     try {
-      generateNativePDF(summary, charts, selectedDate, individualData, globalEvents);
+      // Use dailySummary for the overview if available, otherwise fallback to global summary
+      const reportSummary = dailySummary || summary;
+      generateNativePDF(reportSummary, charts, selectedDate, individualData, globalEvents);
     } catch (error) {
       setErrorMsg("Error al generar PDF técnico.");
     } finally {
@@ -288,10 +302,10 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
             <div className="space-y-12">
                <div className="grid grid-cols-4 gap-4">
                   {[
-                    { label: 'INGRESOS', value: summary?.ingresos || 0, sub: 'METRICA_VERIFICADA' },
-                    { label: 'SALIDAS', value: summary?.salidas || 0, sub: 'METRICA_VERIFICADA' },
-                    { label: 'USUARIOS', value: charts?.summary?.unique_users || 0, sub: 'IDENT_UNICAS' },
-                    { label: 'HORA PICO', value: charts?.summary?.peak_hour || 'N/A', sub: 'CONGEST_MAX' }
+                    { label: 'INGRESOS', value: (dailySummary || summary)?.ingresos || 0, sub: dailySummary ? 'RESUMEN_DIARIO' : 'METRICA_VERIFICADA' },
+                    { label: 'SALIDAS', value: (dailySummary || summary)?.salidas || 0, sub: dailySummary ? 'RESUMEN_DIARIO' : 'METRICA_VERIFICADA' },
+                    { label: 'USUARIOS', value: (dailySummary || charts?.summary)?.unique_users || 0, sub: 'IDENT_UNICAS' },
+                    { label: 'HORA PICO', value: (dailySummary || charts?.summary)?.peak_hour || 'N/A', sub: 'CONGEST_MAX' }
                   ].map((k, i) => (
                     <div key={i} className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
                        <span className="text-[7px] font-black text-slate-400 uppercase block mb-2">{k.label}</span>

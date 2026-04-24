@@ -398,7 +398,7 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
       });
     }
 
-    const totalPages = doc.internal.getNumberOfPages();
+    const totalPages = doc.getNumberOfPages();
     for(let i=1; i<=totalPages; i++) drawFooter(i, totalPages);
   }
 

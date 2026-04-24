@@ -43,7 +43,7 @@ const ImportView: React.FC = () => {
       const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       const data = await res.json();
       if (res.ok) {
-        setStatus({ type: 'success', msg: `Sincronización completa: ${data.inserted} registros procesados.` });
+        setStatus({ type: 'success', msg: `Sincronización completa: ${data.records} registros procesados.` });
         setFile(null);
       } else {
         setStatus({ type: 'error', msg: data.detail || 'Error en el procesamiento del archivo.' });
