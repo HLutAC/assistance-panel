@@ -8,9 +8,15 @@ const EditView: React.FC = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [escuelas, setEscuelas] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ Nombre: '', escuela: '' });
   const [normForm, setNormForm] = useState({ old_name: '', new_name: '' });
+  const [status, setStatus] = useState<{ msg: string; type: 'success' | 'error' | 'confirm' | null }>({ msg: '', type: null });
+
+  const showStatus = (msg: string, type: 'success' | 'error', duration = 3000) => {
+    setStatus({ msg, type });
+    setTimeout(() => setStatus({ msg: '', type: null }), duration);
+  };
 
   const fetchStudents = async () => {
     try {
@@ -18,7 +24,7 @@ const EditView: React.FC = () => {
       const data = await res.json();
       setStudents(data.items);
     } catch (e) {
-      console.error(e);
+      showStatus('Error al cargar estudiantes', 'error');
     }
   };
 
@@ -28,7 +34,7 @@ const EditView: React.FC = () => {
       const data = await res.json();
       setEscuelas(data.filter((e: string) => e !== 'Todas'));
     } catch (e) {
-      console.error(e);
+      showStatus('Error al cargar escuelas', 'error');
     }
   };
 
@@ -37,27 +43,36 @@ const EditView: React.FC = () => {
     fetchEscuelas();
   }, [activeSubTab]);
 
-  const handleUpdate = async (id_persona: number) => {
+  const handleUpdate = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE}/personas/${id_persona}`, {
+      const res = await fetch(`${API_BASE}/personas/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
       if (res.ok) {
         setEditingId(null);
+        showStatus('Registro actualizado con éxito', 'success');
         fetchStudents();
         fetchEscuelas();
+      } else {
+        showStatus('Error al actualizar registro', 'error');
       }
     } catch (e) {
-      console.error(e);
+      showStatus('Error de conexión', 'error');
     }
   };
 
-  const handleNormalize = async () => {
+  const requestNormalization = () => {
     if (!normForm.old_name || !normForm.new_name) return;
-    if (!confirm(`¿Estás seguro de que deseas renombrar todas las ocurrencias de "${normForm.old_name}" a "${normForm.new_name}"?`)) return;
+    setStatus({ 
+      msg: `¿Renombrar todas las ocurrencias de "${normForm.old_name}" a "${normForm.new_name}"?`, 
+      type: 'confirm' 
+    });
+  };
 
+  const executeNormalize = async () => {
+    setStatus({ msg: 'Procesando...', type: null });
     try {
       const res = await fetch(`${API_BASE}/personas/normalize-escuela`, {
         method: 'POST',
@@ -66,12 +81,15 @@ const EditView: React.FC = () => {
       });
       if (res.ok) {
         setNormForm({ old_name: '', new_name: '' });
-        alert('Normalización completada con éxito');
+        showStatus('Normalización completada con éxito', 'success');
         fetchEscuelas();
         if (activeSubTab === 'students') fetchStudents();
+      } else {
+        const err = await res.json();
+        showStatus(err.detail || 'Fallo en la normalización', 'error');
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      showStatus(`Error de red: ${e.message}`, 'error');
     }
   };
 
@@ -92,6 +110,50 @@ const EditView: React.FC = () => {
           Normalizar Carreras
         </button>
       </div>
+
+      {/* Status Notifications & Confirmations Overlay */}
+      {status.type && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 p-8 max-w-md w-full animate-in zoom-in-95 duration-300">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${
+              status.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 
+              status.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+            }`}>
+              {status.type === 'success' ? <Check size={24} /> : status.type === 'error' ? <X size={24} /> : <RefreshCw size={24} className="animate-spin" />}
+            </div>
+            <h3 className="text-lg font-black text-slate-800 mb-2">
+              {status.type === 'confirm' ? 'Confirmar Acción' : status.type === 'success' ? '¡Éxito!' : 'Notificación'}
+            </h3>
+            <p className="text-slate-500 text-sm mb-8 leading-relaxed">{status.msg}</p>
+            
+            <div className="flex gap-3">
+              {status.type === 'confirm' ? (
+                <>
+                  <button 
+                    onClick={executeNormalize}
+                    className="flex-1 py-3 bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:scale-[1.02] active:scale-[0.95] transition-all"
+                  >
+                    Confirmar
+                  </button>
+                  <button 
+                    onClick={() => setStatus({ msg: '', type: null })}
+                    className="flex-1 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setStatus({ msg: '', type: null })}
+                  className="w-full py-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all"
+                >
+                  Cerrar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeSubTab === 'students' ? (
         <div className="space-y-6">
@@ -127,10 +189,10 @@ const EditView: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {students.map((p) => (
-                  <tr key={p.id_persona} className="group hover:bg-slate-50/50 transition-all">
-                    <td className="px-6 py-4 text-xs font-mono font-bold text-slate-400">{p.ID}</td>
+                  <tr key={p.id} className="group hover:bg-slate-50/50 transition-all">
+                    <td className="px-6 py-4 text-xs font-mono font-bold text-slate-400">{p.id}</td>
                     <td className="px-6 py-4">
-                      {editingId === p.id_persona ? (
+                      {editingId === p.id ? (
                         <input 
                           type="text"
                           value={editForm.Nombre}
@@ -142,7 +204,7 @@ const EditView: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {editingId === p.id_persona ? (
+                      {editingId === p.id ? (
                         <input 
                           type="text"
                           list="escuelas-list"
@@ -157,15 +219,15 @@ const EditView: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {editingId === p.id_persona ? (
+                      {editingId === p.id ? (
                         <div className="flex justify-end gap-2">
-                          <button onClick={() => handleUpdate(p.id_persona)} className="p-2 bg-emerald-500 text-white rounded-xl shadow-md"><Check size={14} /></button>
+                          <button onClick={() => handleUpdate(p.id)} className="p-2 bg-emerald-500 text-white rounded-xl shadow-md"><Check size={14} /></button>
                           <button onClick={() => setEditingId(null)} className="p-2 bg-slate-400 text-white rounded-xl shadow-md"><X size={14} /></button>
                         </div>
                       ) : (
                         <button 
                           onClick={() => {
-                            setEditingId(p.id_persona);
+                            setEditingId(p.id);
                             setEditForm({ Nombre: p.Nombre, escuela: p.escuela || '' });
                           }}
                           className="p-2 text-slate-300 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all"
@@ -216,7 +278,7 @@ const EditView: React.FC = () => {
               </div>
 
               <button 
-                onClick={handleNormalize}
+                onClick={requestNormalization}
                 disabled={!normForm.old_name || !normForm.new_name}
                 className="w-full py-4 bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 transition-all mt-4"
               >

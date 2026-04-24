@@ -16,4 +16,4 @@ Este proyecto nació de la necesidad de centralizar y limpiar los registros (log
    - Servidor: `python main.py`
 3. **Setup del Frontend**:
    - Instala los paquetes: `npm install`
-   - Inicia el proyecto: `npm run dev`.
+   - Inicia el proyecto: `npm run dev`

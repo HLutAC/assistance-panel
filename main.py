@@ -151,28 +151,47 @@ def get_summary(fecha: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/events/drill-down")
-def get_drill_down_events(hour: int, fecha: Optional[str] = None):
+def get_drill_down_events(
+    hour: int, 
+    fecha: Optional[str] = None, 
+    search: Optional[str] = None,
+    global_search: Optional[str] = None,
+    page: int = 1,
+    size: int = 20
+):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
+        offset = (page - 1) * size
         params = [hour]
         date_filter = "AND timestamp::date = %s" if fecha else ""
         if fecha: params.append(fecha)
         
-        query = f"""
-        WITH deduplicated AS (
+        s = search or global_search
+        search_filter = get_search_filter(s, params)
+
+        # Base query with deduplication logic
+        base_query = f"""
             SELECT e.*, i.nombre, i.apellido, i.escuela,
                    LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
             FROM eventos e
-            JOIN integrantes i ON e.person_id = i.id
-            WHERE EXTRACT(HOUR FROM timestamp) = %s {date_filter}
-        )
-        SELECT person_id, nombre, apellido, escuela, tipo_movimiento, carril, timestamp::text as t
-        FROM deduplicated 
-        WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
-        ORDER BY timestamp DESC;
+            LEFT JOIN integrantes i ON e.person_id = i.id
+            WHERE EXTRACT(HOUR FROM timestamp) = %s {date_filter} {search_filter}
         """
-        cur.execute(query, params)
-        return cur.fetchall()
+
+        # Count total after deduplication
+        cur.execute(f"SELECT COUNT(*) as total FROM ({base_query}) as d WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'", params)
+        total = cur.fetchone()['total']
+
+        # Get paginated items
+        query = f"""
+            SELECT person_id, person_id as "ID", nombre, apellido, escuela, tipo_movimiento, carril, timestamp::text as t
+            FROM ({base_query}) as d
+            WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+            ORDER BY timestamp DESC
+            LIMIT %s OFFSET %s;
+        """
+        cur.execute(query, (*params, size, offset))
+        return {"items": cur.fetchall(), "total": total}
     finally:
         cur.close(); conn.close()
 
@@ -554,13 +573,13 @@ def get_personas(
         cur.execute(f"SELECT COUNT(*) as total FROM integrantes {filter_sql}", params)
         total = cur.fetchone()['total']
         
-        cur.execute(f"SELECT id as \"ID\", nombre as \"Nombre\", apellido as \"Apellido\", escuela as \"escuela\" FROM integrantes {filter_sql} ORDER BY id ASC LIMIT %s OFFSET %s", (*params, size, offset))
+        cur.execute(f"SELECT id as person_id, id as \"ID\", id as id_persona, nombre as \"Nombre\", apellido as \"Apellido\", escuela as \"escuela\" FROM integrantes {filter_sql} ORDER BY id ASC LIMIT %s OFFSET %s", (*params, size, offset))
         personas = cur.fetchall()
         
         for p in personas:
             events_source = "eventos"
             date_filter = ""
-            event_params = [p['ID']]
+            event_params = [p['person_id']]
             
             if fecha:
                 date_filter = "AND timestamp::date = %s"
@@ -592,7 +611,7 @@ def get_personas(
         cur.close(); conn.close()
 
 @app.put("/api/personas/{id_persona}")
-def update_persona(id_persona: int, data: dict):
+def update_persona(id_persona: str, data: dict):
     conn = get_db_connection(); cur = conn.cursor()
     try:
         nombre = data.get('Nombre')
@@ -601,7 +620,7 @@ def update_persona(id_persona: int, data: dict):
         if not nombre or not escuela:
             raise HTTPException(status_code=400, detail="Nombre y Escuela son requeridos")
             
-        cur.execute("UPDATE integrantes SET nombre = %s, escuela = %s WHERE id_persona = %s", (nombre, escuela, id_persona))
+        cur.execute("UPDATE integrantes SET nombre = %s, escuela = %s WHERE id = %s", (nombre, escuela, id_persona))
         conn.commit()
         return {"status": "success"}
     finally:

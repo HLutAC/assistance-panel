@@ -12,15 +12,16 @@ interface ReportViewProps {
 const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const exportPDF = async () => {
     setIsGenerating(true);
+    setErrorMsg(null);
     try {
-      // Use the programmatic generator for 100% reliability
       generateNativePDF(summary, charts, selectedDate);
     } catch (error) {
       console.error("Native PDF Fail:", error);
-      alert("Error al generar PDF. Utiliza el botón 'Imprimir' y selecciona 'Guardar como PDF'.");
+      setErrorMsg("Error al generar PDF. Utiliza el botón 'Imprimir' y selecciona 'Guardar como PDF'.");
     } finally {
       setIsGenerating(false);
     }
@@ -105,6 +106,21 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
           </button>
         </div>
       </div>
+
+      {/* Error Message Banner */}
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+              <X size={16} />
+            </div>
+            <p className="text-xs font-bold text-red-800">{errorMsg}</p>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="p-2 text-red-400 hover:text-red-600 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Report Preview Container */}
       <div className="flex justify-center p-4 bg-slate-900/5 rounded-[40px] border-2 border-dashed border-slate-200">

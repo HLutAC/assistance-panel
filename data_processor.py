@@ -43,10 +43,7 @@ def upsert_to_db(processed_data, source_file):
         upsert_integrante_sql = """
         INSERT INTO integrantes (id, nombre, apellido, escuela)
         VALUES (%s, %s, %s, %s)
-        ON CONFLICT (id) DO UPDATE SET
-            nombre = EXCLUDED.nombre,
-            apellido = EXCLUDED.apellido,
-            escuela = EXCLUDED.escuela;
+        ON CONFLICT (id) DO NOTHING;
         """
         extras.execute_batch(cur, upsert_integrante_sql, integrantes)
         
