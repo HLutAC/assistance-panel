@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileCheck, X, AlertCircle,RefreshCw } from 'lucide-react';
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = `http://${window.location.hostname}:8000/api`;
 
 const ImportView: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -40,7 +40,7 @@ const ImportView: React.FC = () => {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${API_BASE}/import/csv`, { method: 'POST', body: formData });
+      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
       const data = await res.json();
       if (res.ok) {
         setStatus({ type: 'success', msg: `Sincronización completa: ${data.inserted} registros procesados.` });

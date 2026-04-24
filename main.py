@@ -50,6 +50,12 @@ def get_db_connection():
         port=os.getenv("DB_PORT", "5433")
     )
 
+def get_search_filter(search: Optional[str], params: list):
+    if not search:
+        return ""
+    params.extend([f"%{search}%"] * 4)
+    return "AND (i.nombre ILIKE %s OR i.apellido ILIKE %s OR i.id::text ILIKE %s OR i.escuela ILIKE %s)"
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
@@ -89,7 +95,6 @@ def get_devices_status():
     status = {}
     for ip in ALL_IPS:
         is_online = False
-        # Intentamos conectar a los puertos más comunes (80 para ISAPI/Web, 8000 para SDK)
         for port in [80, 8000]:
             try:
                 with socket.create_connection((ip, port), timeout=0.6):
@@ -97,24 +102,8 @@ def get_devices_status():
                     break
             except (socket.timeout, ConnectionRefusedError, OSError):
                 continue
-        
         status[ip] = "online" if is_online else "offline"
     return status
-
-@app.get("/api/devices/proxy/{ip}")
-def device_proxy(ip: str, user: str = Query(...), password: str = Query(...)):
-    """
-    Checks if device is reachable with provided credentials.
-    """
-    try:
-        url = f"http://{ip}/ISAPI/System/deviceInfo"
-        response = requests.get(url, auth=requests.auth.HTTPBasicAuth(user, password), timeout=5)
-        if response.status_code == 200:
-            return {"status": "authenticated", "data": "Handshake OK"}
-        else:
-            return {"status": "failed", "code": response.status_code}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
 
 @app.get("/api/summary")
 def get_summary(fecha: Optional[str] = None):
@@ -161,42 +150,152 @@ def get_summary(fecha: Optional[str] = None):
     finally:
         cur.close(); conn.close()
 
-@app.get("/api/charts/hourly")
-def get_hourly_chart(fecha: Optional[str] = None):
+@app.get("/api/events/drill-down")
+def get_drill_down_events(hour: int, fecha: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        params = [fecha] if fecha else []
-        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        params = [hour]
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        if fecha: params.append(fecha)
+        
+        query = f"""
+        WITH deduplicated AS (
+            SELECT e.*, i.nombre, i.apellido, i.escuela,
+                   LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE EXTRACT(HOUR FROM timestamp) = %s {date_filter}
+        )
+        SELECT person_id, nombre, apellido, escuela, tipo_movimiento, carril, timestamp::text as t
+        FROM deduplicated 
+        WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
+        ORDER BY timestamp DESC;
+        """
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/hourly-escuela")
+def get_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+            
+        query = f"""
+        SELECT 
+            EXTRACT(HOUR FROM timestamp) as hora,
+            i.escuela,
+            COUNT(*) as value
+        FROM eventos e
+        JOIN integrantes i ON e.person_id = i.id
+        WHERE tipo_movimiento = 'INGRESO' {date_filter} {search_filter}
+        GROUP BY hora, i.escuela
+        ORDER BY hora;
+        """
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/duration-hourly-escuela")
+def get_duration_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        date_filter = "AND e1.timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+            
+        query = f"""
+        WITH durations AS (
+            SELECT 
+                e1.person_id,
+                i.escuela,
+                EXTRACT(HOUR FROM e1.timestamp) as hora_ingreso,
+                EXTRACT(EPOCH FROM (e2.timestamp - e1.timestamp))/3600 as horas
+            FROM eventos e1
+            JOIN eventos e2 ON e1.person_id = e2.person_id 
+                AND e2.timestamp > e1.timestamp 
+                AND e2.timestamp - e1.timestamp < interval '14 hours'
+            JOIN integrantes i ON e1.person_id = i.id
+            WHERE e1.tipo_movimiento = 'INGRESO' 
+              AND e2.tipo_movimiento = 'SALIDA'
+              {date_filter} {search_filter}
+        )
+        SELECT 
+            hora_ingreso as hora,
+            escuela,
+            AVG(horas) as value
+        FROM durations
+        GROUP BY hora, escuela
+        ORDER BY hora;
+        """
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/hourly")
+def get_hourly_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+
         base_query = f"""
         WITH deduplicated AS (
-            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos {date_filter}
+            SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
-        query = f"SELECT EXTRACT(HOUR FROM timestamp) as hora, COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d GROUP BY hora ORDER BY hora;"
-        cur.execute(query, params); results = cur.fetchall()
-        full_hourly = []
-        res_map = {int(r['hora']): r for r in results}
-        for h in range(24):
-            if h in res_map:
-                full_hourly.append({"hora": f"{h:02d}:00", "ingresos": res_map[h]['ingresos'], "salidas": res_map[h]['salidas']})
+        
+        query = f"""
+        SELECT 
+            EXTRACT(HOUR FROM timestamp) as h,
+            COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos,
+            COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas
+        FROM ({base_query}) as d
+        GROUP BY h
+        ORDER BY h;
+        """
+        cur.execute(query, params)
+        res = cur.fetchall()
+        
+        data = []
+        counts = {int(r['h']): r for r in res}
+        for i in range(24):
+            if i in counts:
+                data.append({"hora": f"{i:02d}:00", "ingresos": counts[i]['ingresos'], "salidas": counts[i]['salidas']})
             else:
-                full_hourly.append({"hora": f"{h:02d}:00", "ingresos": 0, "salidas": 0})
-        return full_hourly
+                data.append({"hora": f"{i:02d}:00", "ingresos": 0, "salidas": 0})
+        return data
     finally:
         cur.close(); conn.close()
 
 @app.get("/api/charts/lane")
-def get_lane_chart(fecha: Optional[str] = None):
+def get_lane_chart(fecha: Optional[str] = None, search: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        params = [fecha] if fecha else []
-        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+
         base_query = f"""
         WITH deduplicated AS (
-            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos {date_filter}
+            SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
@@ -206,37 +305,47 @@ def get_lane_chart(fecha: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/charts/pie")
-def get_pie_chart(fecha: Optional[str] = None):
+def get_pie_chart(fecha: Optional[str] = None, search: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        params = [fecha] if fecha else []
-        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+
         base_query = f"""
         WITH deduplicated AS (
-            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos {date_filter}
+            SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
         cur.execute(f"SELECT COUNT(*) FILTER (WHERE tipo_movimiento = 'INGRESO') as ingresos, COUNT(*) FILTER (WHERE tipo_movimiento = 'SALIDA') as salidas FROM ({base_query}) as d", params)
         res = cur.fetchone()
         return [
-            {"name": "Ingresos", "value": res['ingresos']},
-            {"name": "Salidas", "value": res['salidas']}
+            {"name": "Ingresos", "value": res['ingresos'] or 0},
+            {"name": "Salidas", "value": res['salidas'] or 0}
         ]
     finally:
         cur.close(); conn.close()
 
 @app.get("/api/charts/heatmap")
-def get_heatmap_chart(fecha: Optional[str] = None):
+def get_heatmap_chart(fecha: Optional[str] = None, search: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        params = [fecha] if fecha else []
-        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+
         base_query = f"""
         WITH deduplicated AS (
-            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos {date_filter}
+            SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
@@ -246,15 +355,20 @@ def get_heatmap_chart(fecha: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/charts/escuela")
-def get_escuela_chart(fecha: Optional[str] = None):
+def get_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        params = [fecha] if fecha else []
-        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+
         base_query = f"""
         WITH deduplicated AS (
             SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
-            FROM eventos e {date_filter}
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
@@ -270,16 +384,100 @@ def get_escuela_chart(fecha: Optional[str] = None):
     finally:
         cur.close(); conn.close()
 
-@app.get("/api/charts/summary-stats")
-def get_summary_stats(fecha: Optional[str] = None):
+@app.get("/api/charts/duration")
+def get_duration_chart(fecha: Optional[str] = None, search: Optional[str] = None):
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        params = [fecha] if fecha else []
-        date_filter = "WHERE timestamp::date = %s" if fecha else ""
+        date_filter = "AND e.timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+        
+        query = f"""
+        WITH daily_trips AS (
+            SELECT 
+                e.person_id, 
+                e.timestamp::date as fecha,
+                MIN(e.timestamp) as start_time,
+                MAX(e.timestamp) as end_time
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
+            GROUP BY e.person_id, fecha
+            HAVING MIN(e.timestamp) != MAX(e.timestamp)
+        )
+        SELECT 
+            EXTRACT(HOUR FROM start_time) as hora,
+            AVG(EXTRACT(EPOCH FROM (end_time - start_time))/3600) as avg_hours
+        FROM daily_trips
+        GROUP BY hora
+        ORDER BY hora;
+        """
+        cur.execute(query, params); results = cur.fetchall()
+        
+        full_duration = []
+        res_map = {int(r['hora']): r for r in results}
+        for h in range(24):
+            if h in res_map:
+                full_duration.append({
+                    "hora": f"{h:02d}:00", 
+                    "horas": round(float(res_map[h]['avg_hours']), 2)
+                })
+            else:
+                full_duration.append({"hora": f"{h:02d}:00", "horas": 0})
+        return full_duration
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/duration-escuela")
+def get_duration_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        date_filter = "AND e.timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+        
+        query = f"""
+        WITH user_daily_duration AS (
+            SELECT 
+                e.person_id, 
+                e.timestamp::date as fecha,
+                i.escuela,
+                EXTRACT(EPOCH FROM (MAX(e.timestamp) - MIN(e.timestamp)))/3600 as hours
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
+            GROUP BY e.person_id, fecha, i.escuela
+            HAVING COUNT(*) > 1
+        )
+        SELECT 
+            escuela as name,
+            AVG(hours) as value
+        FROM user_daily_duration
+        GROUP BY escuela
+        ORDER BY value DESC;
+        """
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
+
+@app.get("/api/charts/summary-stats")
+def get_summary_stats(fecha: Optional[str] = None, search: Optional[str] = None):
+    conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        date_filter = "AND timestamp::date = %s" if fecha else ""
+        params = []
+        if fecha: params.append(fecha)
+        search_filter = get_search_filter(search, params)
+
         base_query = f"""
         WITH deduplicated AS (
-            SELECT *, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, id) as prev_ts
-            FROM eventos {date_filter}
+            SELECT e.*, LAG(timestamp) OVER (PARTITION BY person_id, tipo_movimiento ORDER BY timestamp, e.id) as prev_ts
+            FROM eventos e
+            JOIN integrantes i ON e.person_id = i.id
+            WHERE 1=1 {date_filter} {search_filter}
         )
         SELECT * FROM deduplicated WHERE prev_ts IS NULL OR timestamp - prev_ts > interval '5 minutes'
         """
@@ -422,6 +620,31 @@ def normalize_escuela(data: dict):
         cur.execute("UPDATE integrantes SET escuela = %s WHERE escuela = %s", (new_name, old_name))
         conn.commit()
         return {"status": "success", "updated_count": cur.rowcount}
+    finally:
+        cur.close(); conn.close()
+
+@app.post("/api/data/archive")
+def archive_old_data():
+    """Mueve datos anteriores al 14 de abril a la tabla de archivo."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        # Asegurar que existe la tabla de archivo
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS eventos_archivo AS 
+            SELECT * FROM eventos WHERE 1=0
+        """)
+        
+        # Mover datos
+        cur.execute("""
+            WITH deleted AS (
+                DELETE FROM eventos 
+                WHERE timestamp < '2026-04-14'
+                RETURNING *
+            )
+            INSERT INTO eventos_archivo SELECT * FROM deleted;
+        """)
+        conn.commit()
+        return {"status": "success", "archived_count": cur.rowcount}
     finally:
         cur.close(); conn.close()
 

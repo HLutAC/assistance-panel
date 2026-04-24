@@ -83,13 +83,6 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
         </div>
         <div className="flex gap-4">
           <button 
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-50 text-slate-700 rounded-2xl text-xs font-black hover:bg-slate-100 transition-all active:scale-95 border border-slate-100 uppercase tracking-wider no-print"
-          >
-            <Printer size={14} />
-            Imprimir
-          </button>
-          <button 
             onClick={exportExcel}
             className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-black hover:bg-emerald-100 transition-all active:scale-95 border border-emerald-100 uppercase tracking-wider"
           >

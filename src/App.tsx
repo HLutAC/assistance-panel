@@ -7,7 +7,7 @@ import ConfigView from './components/ConfigView';
 import EditView from './components/EditView';
 import ReportView from './components/ReportView';
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = `http://${window.location.hostname}:8000/api`;
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('resumen');
@@ -21,6 +21,10 @@ const App: React.FC = () => {
     heatmap: any[];
     sequence: any[];
     escuela: any[];
+    duration: any[];
+    durationEscuela: any[];
+    hourlyEscuela: any[];
+    durationHourlyEscuela: any[];
     summary: any;
   }>({
     hourly: [],
@@ -29,6 +33,10 @@ const App: React.FC = () => {
     heatmap: [],
     sequence: [],
     escuela: [],
+    duration: [],
+    durationEscuela: [],
+    hourlyEscuela: [],
+    durationHourlyEscuela: [],
     summary: null
   });
   const [loading, setLoading] = useState(true);
@@ -41,6 +49,7 @@ const App: React.FC = () => {
   const [escuela, setEscuela] = useState('Todas');
   const [escuelas, setEscuelas] = useState<string[]>([]);
   const [fecha, setFecha] = useState('');
+  const [analyticsSearch, setAnalyticsSearch] = useState('');
 
   useEffect(() => {
     fetch(`${API_BASE}/config/escuelas`)
@@ -64,6 +73,10 @@ const App: React.FC = () => {
       setLoading(true);
       try {
         const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}&fecha=${fecha || ''}`;
+        const analyticParams = new URLSearchParams({
+          fecha: fecha || '',
+          search: analyticsSearch
+        }).toString();
         
         const [
           summaryRes, 
@@ -75,18 +88,26 @@ const App: React.FC = () => {
           heatmapData, 
           sequenceData, 
           escuelaData, 
-          summaryStats
+          summaryStats,
+          durationData,
+          durationEscuelaData,
+          hourlyEscuelaData,
+          durationHourlyEscuelaData
         ] = await Promise.all([
           fetch(`${API_BASE}/summary?fecha=${fecha || ''}`),
           fetch(`${API_BASE}/personas?${queryParams}`),
           fetch(`${API_BASE}/personas?${queryParams}&clean=true`),
-          fetch(`${API_BASE}/charts/hourly?fecha=${fecha || ''}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/lane?fecha=${fecha || ''}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/pie?fecha=${fecha || ''}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/heatmap?fecha=${fecha || ''}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/hourly?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/lane?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/pie?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/heatmap?${analyticParams}`).then(r => r.json()),
           fetch(`${API_BASE}/charts/sequence`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/escuela?fecha=${fecha || ''}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/summary-stats?fecha=${fecha || ''}`).then(r => r.json())
+          fetch(`${API_BASE}/charts/escuela?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/summary-stats?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/duration?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/duration-escuela?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/hourly-escuela?${analyticParams}`).then(r => r.json()),
+          fetch(`${API_BASE}/charts/duration-hourly-escuela?${analyticParams}`).then(r => r.json())
         ]);
 
         const summaryData = await summaryRes.json();
@@ -104,6 +125,10 @@ const App: React.FC = () => {
           heatmap: heatmapData, 
           sequence: sequenceData, 
           escuela: escuelaData, 
+          duration: durationData,
+          durationEscuela: durationEscuelaData,
+          hourlyEscuela: hourlyEscuelaData,
+          durationHourlyEscuela: durationHourlyEscuelaData,
           summary: summaryStats 
         });
       } catch (error) {
@@ -114,7 +139,7 @@ const App: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab, page, searchTerm, pageSize, escuela, fecha]);
+  }, [activeTab, page, searchTerm, pageSize, escuela, fecha, analyticsSearch]);
 
   if (loading && !summary) {
     return (
@@ -178,36 +203,37 @@ const App: React.FC = () => {
       </div>
 
       {/* Primary Application Stage */}
-      <div className="flex-1 overflow-hidden relative z-10 flex flex-col items-center py-4">
-        <div className="w-full max-w-7xl h-[calc(100vh-80px)] polaris-glass p-10 flex flex-col animate-in slide-in-from-bottom-4 duration-700">
+      <div className="flex-1 overflow-hidden relative z-10 flex flex-col items-center py-2 md:py-4">
+        <div className="w-full max-w-[98%] h-full md:h-[calc(100vh-80px)] polaris-glass p-4 md:p-10 flex flex-col animate-in slide-in-from-bottom-4 duration-700">
           
-          {/* Polaris Header */}
-          <div className="polaris-header">
-            <div className="flex items-center space-x-5">
-              <div className="w-10 h-10 bg-blue-700 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
-                <span className="font-black text-lg">S</span>
-              </div>
-              <div>
-                <span className="tech-label-light">SmartAccess // 2.0</span>
-                <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-                  {activeTab === 'resumen' && 'Dashboard Operativo'}
-                  {activeTab === 'registros' && 'Control de Tráfico'}
-                  {activeTab === 'graficos' && 'Analítica Avanzada'}
-                  {activeTab === 'importar' && 'Motor de Ingesta'}
-                  {activeTab === 'configuracion' && 'Configuración de Nodos'}
-                  {activeTab === 'gestion' && 'Gestión y Normalización'}
-                  {activeTab === 'reporte' && 'Generación de Reportes'}
-                </h1>
-              </div>
-            </div>
-            <div className="text-right hidden md:block">
-              <span className="tech-label-light">SISTEMA EN LÍNEA</span>
-              <p className="text-sm font-bold text-slate-400">{new Date().toLocaleDateString()} — {new Date().toLocaleTimeString()}</p>
-            </div>
-          </div>
-
           {/* Module Stage Container */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 md:pr-4">
+            
+            {/* Polaris Header */}
+            <div className="polaris-header flex-col md:flex-row gap-4 items-start md:items-center">
+              <div className="flex items-center space-x-3 md:space-x-5">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-700 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-900/20">
+                  <span className="font-black text-sm md:text-lg">S</span>
+                </div>
+                <div>
+                  <span className="tech-label-light">SmartAccess // 2.0</span>
+                  <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">
+                    {activeTab === 'resumen' && 'Dashboard Operativo'}
+                    {activeTab === 'registros' && 'Control de Tráfico'}
+                    {activeTab === 'graficos' && 'Monitor de Tráfico Dinámico'}
+                    {activeTab === 'importar' && 'Motor de Ingesta'}
+                    {activeTab === 'configuracion' && 'Configuración de Nodos'}
+                    {activeTab === 'gestion' && 'Gestión y Normalización'}
+                    {activeTab === 'reporte' && 'Generación de Reportes'}
+                  </h1>
+                </div>
+              </div>
+              <div className="text-left md:text-right">
+                <span className="tech-label-light">SISTEMA EN LÍNEA</span>
+                <p className="text-[10px] md:text-sm font-bold text-slate-400">{new Date().toLocaleDateString()} — {new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
+
             {activeTab === 'resumen' ? (
               <div className="space-y-10">
                 <div>
@@ -250,7 +276,12 @@ const App: React.FC = () => {
                 />
               </div>
             ) : activeTab === 'graficos' ? (
-              <AnalyticsView charts={charts} />
+              <AnalyticsView 
+                charts={charts} 
+                selectedDate={fecha} 
+                analyticsSearch={analyticsSearch}
+                onAnalyticsSearch={setAnalyticsSearch}
+              />
             ) : activeTab === 'importar' ? (
               <ImportView />
             ) : activeTab === 'configuracion' ? (

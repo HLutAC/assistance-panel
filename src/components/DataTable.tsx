@@ -40,8 +40,8 @@ const DataTable: React.FC<DataTableProps> = ({
   return (
     <div className="flex flex-col h-full space-y-6">
       {/* Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5 bg-white border border-slate-100 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-4 flex-1 min-w-[300px]">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-3 md:p-5 bg-white border border-slate-100 rounded-2xl shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
           <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
@@ -110,55 +110,36 @@ const DataTable: React.FC<DataTableProps> = ({
             <StudentCard key={row.ID} row={row} />
           ))}
         </div>
-      </div>
-
-      {/* Pagination */}
-      <div className="mt-12 flex items-center justify-between bg-white border border-slate-100 p-6 rounded-3xl shadow-sm">
-        <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+      </div>      {/* Pagination */}
+      <div className="mt-8 md:mt-12 flex flex-col md:flex-row items-center justify-between bg-white border border-slate-100 p-4 md:p-6 rounded-3xl shadow-sm gap-6">
+        <div className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center md:text-left">
           Mostrando <span className="text-slate-800">{(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)}</span> de <span className="text-slate-800">{total}</span> integrantes
         </div>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-            className="px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-blue-700 disabled:opacity-30 transition-all"
-          >
-            Anterior
-          </button>
-          
-          <div className="flex items-center bg-slate-50 rounded-2xl p-1 border border-slate-100">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-4">
             <button 
-              onClick={() => setPage(Math.max(1, page - 1))}
+              onClick={() => setPage(page - 1)}
               disabled={page === 1}
-              className="p-2 text-slate-500 hover:text-blue-700 disabled:opacity-30"
+              className="px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-blue-700 disabled:opacity-30 transition-all font-mono"
             >
-              <ChevronLeft size={18} />
+              PREV
             </button>
-            
-            <div className="px-4 flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pág</span>
-              <button className="w-8 h-8 flex items-center justify-center bg-orange-500 text-white text-sm font-black rounded-lg shadow-md shadow-orange-900/20">
-                {page}
-              </button>
-              <span className="text-[10px] font-black text-slate-400 uppercase">/ {Math.ceil(total / pageSize)}</span>
+            <div className="flex items-center bg-slate-50 rounded-2xl p-1 border border-slate-100">
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="p-2 text-slate-500 hover:text-blue-700 disabled:opacity-30"><ChevronLeft size={18} /></button>
+              <div className="px-3 flex items-center gap-2">
+                <button className="w-8 h-8 flex items-center justify-center bg-orange-500 text-white text-xs font-black rounded-lg shadow-md shadow-orange-900/20">{page}</button>
+                <span className="text-[10px] font-black text-slate-400 uppercase">/ {Math.ceil(total / pageSize)}</span>
+              </div>
+              <button onClick={() => setPage(Math.min(Math.ceil(total / pageSize), page + 1))} disabled={page >= Math.ceil(total / pageSize)} className="p-2 text-slate-500 hover:text-blue-700 disabled:opacity-30"><ChevronRight size={18} /></button>
             </div>
-
             <button 
-              onClick={() => setPage(Math.min(Math.ceil(total / pageSize), page + 1))}
+              onClick={() => setPage(page + 1)}
               disabled={page >= Math.ceil(total / pageSize)}
-              className="p-2 text-slate-500 hover:text-blue-700 disabled:opacity-30"
+              className="px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-blue-700 disabled:opacity-30 transition-all font-mono"
             >
-              <ChevronRight size={18} />
+              NEXT
             </button>
           </div>
-
-          <button 
-            onClick={() => setPage(page + 1)}
-            disabled={page >= Math.ceil(total / pageSize)}
-            className="px-4 py-2 text-[10px] font-black uppercase text-slate-500 hover:text-blue-700 disabled:opacity-30 transition-all"
-          >
-            Siguiente
-          </button>
         </div>
       </div>
     </div>
@@ -243,7 +224,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ row }) => {
           <div className="flex items-center justify-between mb-3 border-b border-slate-50 pb-2">
             <span className="text-[12px] font-black text-slate-400 uppercase tracking-[0.2em]">Bitácora // {activeDate}</span>
           </div>
-          <div className="grid grid-cols-2 gap-6 h-[160px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 h-fit sm:h-[160px]">
             {/* Column 1: Ingresos (ASC) */}
             <div className="flex flex-col">
               <span className="text-[11px] font-black text-emerald-500 uppercase mb-2 ml-1">Ingresos</span>
