@@ -3,7 +3,12 @@ import { Upload, FileCheck, X, AlertCircle,RefreshCw } from 'lucide-react';
 
 const API_BASE = `http://${window.location.hostname}:8000/api`;
 
-const ImportView: React.FC = () => {
+interface ImportViewProps {
+  token: string | null;
+}
+
+const ImportView: React.FC<ImportViewProps> = ({ token }) => {
+
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -40,7 +45,12 @@ const ImportView: React.FC = () => {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+      const res = await fetch(`${API_BASE}/upload`, { 
+        method: 'POST', 
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData 
+      });
+
       const data = await res.json();
       if (res.ok) {
         setStatus({ type: 'success', msg: `Sincronización completa: ${data.records} registros procesados.` });

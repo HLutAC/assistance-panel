@@ -208,15 +208,18 @@ const StudentCard: React.FC<StudentCardProps> = ({ row }) => {
             <span className="text-xl font-black text-emerald-600">{dayIngresos.length}</span>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+
+
+          <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
             <div className="flex items-center justify-between mb-1">
-              <div className="w-6 h-6 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500">
+              <div className="w-6 h-6 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
                 <LogOut size={10} />
               </div>
-              <span className="text-[8px] font-black text-slate-500/50 uppercase">Out</span>
+              <span className="text-[8px] font-black text-orange-600/50 uppercase">Out</span>
             </div>
-            <span className="text-xl font-black text-slate-600">{daySalidas.length}</span>
+            <span className="text-xl font-black text-orange-600">{daySalidas.length}</span>
           </div>
+
         </div>
 
         {/* Dual Stream Logs Flow for selected date */}
@@ -237,6 +240,8 @@ const StudentCard: React.FC<StudentCardProps> = ({ row }) => {
                     </div>
                   ))
                 ) : (
+
+
                   <div className="h-full flex items-center justify-center bg-slate-50/30 rounded-xl border border-dashed border-slate-200">
                     <span className="text-[8px] font-bold text-slate-300 italic">---</span>
                   </div>
@@ -246,16 +251,17 @@ const StudentCard: React.FC<StudentCardProps> = ({ row }) => {
 
             {/* Column 2: Salidas (ASC) */}
             <div className="flex flex-col">
-              <span className="text-[11px] font-black text-slate-500 uppercase mb-2 ml-1">Salidas</span>
+              <span className="text-[11px] font-black text-orange-600 uppercase mb-2 ml-1">Salidas</span>
               <div className="space-y-1.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
                 {daySalidas.length > 0 ? (
                   daySalidas.sort((a: any, b: any) => a.Hora.localeCompare(b.Hora)).map((evt: any, i: any) => (
-                    <div key={i} className="flex items-center justify-between p-2 bg-slate-50/50 rounded-lg border border-slate-100/50">
-                      <span className="text-sm font-mono font-black text-slate-500">{evt.Hora.slice(0, 5)}</span>
-                      <span className="text-[10px] font-bold text-slate-400">C{evt.Carril}</span>
+                    <div key={i} className="flex items-center justify-between p-2 bg-orange-50/30 rounded-lg border border-orange-100/40">
+                      <span className="text-sm font-mono font-black text-orange-600">{evt.Hora.slice(0, 5)}</span>
+                      <span className="text-[10px] font-bold text-orange-400">C{evt.Carril}</span>
                     </div>
                   ))
                 ) : (
+
                   <div className="h-full flex items-center justify-center bg-slate-50/30 rounded-xl border border-dashed border-slate-200">
                     <span className="text-[8px] font-bold text-slate-300 italic">---</span>
                   </div>

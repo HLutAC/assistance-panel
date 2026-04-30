@@ -29,7 +29,12 @@ const devicesConfig = [
   }
 ];
 
-const ConfigView: React.FC = () => {
+interface ConfigViewProps {
+  token: string | null;
+}
+
+const ConfigView: React.FC<ConfigViewProps> = ({ token }) => {
+
   const [deviceStatus, setDeviceStatus] = useState<Record<string, 'online' | 'offline'>>({});
   const [loading, setLoading] = useState(true);
   const [testResult, setTestResult] = useState<Record<string, string>>({});
@@ -47,7 +52,10 @@ const ConfigView: React.FC = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/devices/status');
+        const response = await fetch(`http://${window.location.hostname}:8000/api/devices/status`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
         if (response.ok) {
           const statuses = await response.json();
           setDeviceStatus(statuses);

@@ -36,6 +36,8 @@ const KPIStats: React.FC<KPIStatsProps> = ({ summary }) => {
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-50/50',
       accentColor: 'bg-emerald-500'
+
+
     },
     {
       title: 'Registros de Salida',

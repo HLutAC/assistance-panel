@@ -132,8 +132,10 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
     const statW = contentWidth / 3;
     const statsY = 105;
     [
-      { label: "INGRESOS", value: s.ingresos, color: colors.accent },
-      { label: "SALIDAS", value: s.salidas, color: colors.success },
+      { label: "INGRESOS", value: s.ingresos, color: colors.success },
+
+      { label: "SALIDAS", value: s.salidas, color: colors.warning },
+
       { label: "TOTAL EVENTOS", value: s.ingresos + s.salidas, color: colors.primary }
     ].forEach((stat, i) => {
       const x = margin + (i * statW);
@@ -181,7 +183,9 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
       const ex = margin + (hourFract/24) * timelineW;
       
       const isIng = ev.tipo_movimiento === 'INGRESO';
-      doc.setFillColor(isIng ? colors.accent[0] : colors.success[0], isIng ? colors.accent[1] : colors.success[1], isIng ? colors.accent[2] : colors.success[2]);
+      doc.setFillColor(isIng ? colors.success[0] : colors.warning[0], isIng ? colors.success[1] : colors.warning[1], isIng ? colors.success[2] : colors.warning[2]);
+
+
       doc.circle(ex, timelineY + (timelineH/2), 1.5, 'F');
     });
 
@@ -208,7 +212,9 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
       const isIng = ev.tipo_movimiento === 'INGRESO';
       doc.setFillColor(isIng ? 239 : 236, isIng ? 246 : 253, isIng ? 255 : 245);
       doc.roundedRect(pageWidth/2 - 12, rowY - 4, 24, 6, 1, 1, 'F');
-      doc.setTextColor(isIng ? colors.accent[0] : colors.success[0], isIng ? colors.accent[1] : colors.success[1], isIng ? colors.accent[2] : colors.success[2]);
+      doc.setTextColor(isIng ? colors.success[0] : colors.warning[0], isIng ? colors.success[1] : colors.warning[1], isIng ? colors.success[2] : colors.warning[2]);
+
+
       doc.text(ev.tipo_movimiento, pageWidth/2, rowY, { align: 'center' });
       
       doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);
@@ -231,8 +237,10 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
     const kpiW = contentWidth / 4;
     const kpiY = 55;
     const kpis = [
-      { label: "INGRESOS", val: summary?.ingresos || 0, col: colors.accent },
-      { label: "SALIDAS", val: summary?.salidas || 0, col: colors.success },
+      { label: "INGRESOS", val: summary?.ingresos || 0, col: colors.success },
+
+      { label: "SALIDAS", val: summary?.salidas || 0, col: colors.warning },
+
       { label: "USUARIOS ÚN.", val: charts?.summary?.unique_users || 0, col: colors.primary },
       { label: "HORA PICO", val: charts?.summary?.peak_hour || "N/A", col: colors.warning }
     ];
@@ -281,10 +289,12 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
       const hi = (d.ingresos / maxVal) * chartH;
       const hs = (d.salidas / maxVal) * chartH;
       
-      doc.setFillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.setFillColor(colors.success[0], colors.success[1], colors.success[2]);
+
       doc.rect(x + 0.5, chartY + 10 + chartH - hi, bw - 1, hi, 'F');
       
-      doc.setFillColor(colors.success[0], colors.success[1], colors.success[2]);
+      doc.setFillColor(colors.warning[0], colors.warning[1], colors.warning[2]);
+
       doc.rect(x + 0.5, chartY + 10 + chartH - hi - hs, bw - 1, hs, 'F');
       
       if (i % 4 === 0) {
@@ -386,7 +396,9 @@ export const generateNativePDF = (summary: any, charts: any, selectedDate: strin
         doc.text(`${e.nombre} ${e.apellido}`.toUpperCase().slice(0, 20), margin + 65, gy);
         
         const isIng = e.tipo_movimiento === 'INGRESO';
-        doc.setTextColor(isIng ? colors.accent[0] : colors.success[0], isIng ? colors.accent[1] : colors.success[1], isIng ? colors.accent[2] : colors.success[2]);
+        doc.setTextColor(isIng ? colors.success[0] : colors.warning[0], isIng ? colors.success[1] : colors.warning[1], isIng ? colors.success[2] : colors.warning[2]);
+
+
         doc.text(e.tipo_movimiento[0], pageWidth / 2 + 20, gy);
         
         doc.setTextColor(colors.textMuted[0], colors.textMuted[1], colors.textMuted[2]);

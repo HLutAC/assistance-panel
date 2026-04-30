@@ -11,6 +11,13 @@ from datetime import datetime
 import requests
 from requests.auth import HTTPDigestAuth
 import socket
+from jose import JWTError, jwt
+import bcrypt
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends
+from datetime import timedelta
+
+
 
 # Cargar configuración de dispositivos desde JSON
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "devices.json")
@@ -39,6 +46,38 @@ app.add_middleware(
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Auth Config
+SECRET_KEY = os.getenv("SECRET_KEY", "polaris-super-secret-key-2026")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 600 # 10 hours
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+
+def verify_password(plain_password, hashed_password):
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="No se pudo validar las credenciales",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        return username
+    except JWTError:
+        raise credentials_exception
+
+
 def get_db_connection():
     # Usar ruta absoluta dinámica para el socket de PG
     default_host = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".pgdata/tmp")
@@ -56,8 +95,38 @@ def get_search_filter(search: Optional[str], params: list):
     params.extend([f"%{search}%"] * 4)
     return "AND (i.nombre ILIKE %s OR i.apellido ILIKE %s OR i.id::text ILIKE %s OR i.escuela ILIKE %s)"
 
+@app.post("/api/auth/login")
+def login(data: dict):
+    username = data.get("username")
+    password = data.get("password")
+    
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Usuario y contraseña requeridos")
+        
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
+        user = cur.fetchone()
+        
+        if not user or not verify_password(password, user['hashed_password']):
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+            
+        access_token = create_access_token(data={"sub": user['username']})
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "user": {
+                "username": user['username'],
+                "nombre": user['nombre_completo']
+            }
+        }
+    finally:
+        cur.close(); conn.close()
+
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
+
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Solo se permiten archivos CSV")
     
@@ -78,11 +147,13 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/config/devices")
-def get_devices_config():
+def get_devices_config(current_user: str = Depends(get_current_user)):
+
     return DEVICES_CONFIG
 
 @app.get("/api/config/escuelas")
-def get_escuelas():
+def get_escuelas(current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor()
     try:
         cur.execute("SELECT DISTINCT escuela FROM integrantes WHERE escuela IS NOT NULL AND escuela != '' ORDER BY escuela")
@@ -91,7 +162,8 @@ def get_escuelas():
         cur.close(); conn.close()
 
 @app.get("/api/devices/status")
-def get_devices_status():
+def get_devices_status(current_user: str = Depends(get_current_user)):
+
     status = {}
     for ip in ALL_IPS:
         is_online = False
@@ -106,7 +178,8 @@ def get_devices_status():
     return status
 
 @app.get("/api/summary")
-def get_summary(fecha: Optional[str] = None):
+def get_summary(fecha: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         params = []
@@ -157,8 +230,10 @@ def get_drill_down_events(
     search: Optional[str] = None,
     global_search: Optional[str] = None,
     page: int = 1,
-    size: int = 20
+    size: int = 20,
+    current_user: str = Depends(get_current_user)
 ):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         offset = (page - 1) * size
@@ -196,7 +271,8 @@ def get_drill_down_events(
         cur.close(); conn.close()
 
 @app.get("/api/charts/hourly-escuela")
-def get_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -221,7 +297,8 @@ def get_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] 
         cur.close(); conn.close()
 
 @app.get("/api/charts/duration-hourly-escuela")
-def get_duration_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_duration_hourly_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND e1.timestamp::date = %s" if fecha else ""
@@ -259,7 +336,8 @@ def get_duration_hourly_escuela_chart(fecha: Optional[str] = None, search: Optio
         cur.close(); conn.close()
 
 @app.get("/api/charts/hourly")
-def get_hourly_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_hourly_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -301,7 +379,8 @@ def get_hourly_chart(fecha: Optional[str] = None, search: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/charts/lane")
-def get_lane_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_lane_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -324,7 +403,8 @@ def get_lane_chart(fecha: Optional[str] = None, search: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/charts/pie")
-def get_pie_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_pie_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -351,7 +431,8 @@ def get_pie_chart(fecha: Optional[str] = None, search: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/charts/heatmap")
-def get_heatmap_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_heatmap_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -374,7 +455,8 @@ def get_heatmap_chart(fecha: Optional[str] = None, search: Optional[str] = None)
         cur.close(); conn.close()
 
 @app.get("/api/charts/escuela")
-def get_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -404,7 +486,8 @@ def get_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None)
         cur.close(); conn.close()
 
 @app.get("/api/charts/duration")
-def get_duration_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_duration_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND e.timestamp::date = %s" if fecha else ""
@@ -449,7 +532,8 @@ def get_duration_chart(fecha: Optional[str] = None, search: Optional[str] = None
         cur.close(); conn.close()
 
 @app.get("/api/charts/duration-escuela")
-def get_duration_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_duration_escuela_chart(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND e.timestamp::date = %s" if fecha else ""
@@ -483,7 +567,8 @@ def get_duration_escuela_chart(fecha: Optional[str] = None, search: Optional[str
         cur.close(); conn.close()
 
 @app.get("/api/charts/summary-stats")
-def get_summary_stats(fecha: Optional[str] = None, search: Optional[str] = None):
+def get_summary_stats(fecha: Optional[str] = None, search: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "AND timestamp::date = %s" if fecha else ""
@@ -516,7 +601,8 @@ def get_summary_stats(fecha: Optional[str] = None, search: Optional[str] = None)
         cur.close(); conn.close()
 
 @app.get("/api/charts/sequence")
-def get_sequence_chart():
+def get_sequence_chart(current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cur.execute("SELECT person_id, count(*) as count FROM eventos GROUP BY person_id ORDER BY count DESC LIMIT 10;")
@@ -547,8 +633,10 @@ def get_personas(
     escuela: Optional[str] = None,
     fecha: Optional[str] = None,
     person_id: Optional[str] = None,
-    clean: bool = False
+    clean: bool = False,
+    current_user: str = Depends(get_current_user)
 ):
+
     offset = (page - 1) * size; conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         query_parts = []
@@ -611,7 +699,8 @@ def get_personas(
         cur.close(); conn.close()
 
 @app.put("/api/personas/{id_persona}")
-def update_persona(id_persona: str, data: dict):
+def update_persona(id_persona: str, data: dict, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor()
     try:
         nombre = data.get('Nombre')
@@ -627,7 +716,8 @@ def update_persona(id_persona: str, data: dict):
         cur.close(); conn.close()
 
 @app.post("/api/personas/normalize-escuela")
-def normalize_escuela(data: dict):
+def normalize_escuela(data: dict, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor()
     try:
         old_name = data.get('old_name')
@@ -643,7 +733,8 @@ def normalize_escuela(data: dict):
         cur.close(); conn.close()
 
 @app.post("/api/data/archive")
-def archive_old_data():
+def archive_old_data(current_user: str = Depends(get_current_user)):
+
     """Mueve datos anteriores al 14 de abril a la tabla de archivo."""
     conn = get_db_connection(); cur = conn.cursor()
     try:
@@ -668,7 +759,8 @@ def archive_old_data():
         cur.close(); conn.close()
 
 @app.get("/api/reports/individual")
-def get_individual_report(person_id: str, fecha: Optional[str] = None):
+def get_individual_report(person_id: str, fecha: Optional[str] = None, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cur.execute("SELECT id, nombre, apellido, escuela FROM integrantes WHERE id = %s", (person_id,))
@@ -707,7 +799,8 @@ def get_individual_report(person_id: str, fecha: Optional[str] = None):
         cur.close(); conn.close()
 
 @app.get("/api/reports/global-events")
-def get_global_report_events(fecha: Optional[str] = None, limit: int = 200):
+def get_global_report_events(fecha: Optional[str] = None, limit: int = 200, current_user: str = Depends(get_current_user)):
+
     conn = get_db_connection(); cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         date_filter = "WHERE timestamp::date = %s" if fecha else ""

@@ -6,11 +6,17 @@ import ImportView from './components/ImportView';
 import ConfigView from './components/ConfigView';
 import EditView from './components/EditView';
 import ReportView from './components/ReportView';
+import LoginView from './components/LoginView';
+import { LogOut } from 'lucide-react';
+
 
 const API_BASE = `http://${window.location.hostname}:8000/api`;
 
 const App: React.FC = () => {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('polaris_token'));
+  const [user, setUser] = useState<any>(JSON.parse(localStorage.getItem('polaris_user') || 'null'));
   const [activeTab, setActiveTab] = useState('resumen');
+
   const [summary, setSummary] = useState<any>(null);
   const [personas, setPersonas] = useState<any>([]);
   const [personasClean, setPersonasClean] = useState<any>([]);
@@ -52,11 +58,13 @@ const App: React.FC = () => {
   const [analyticsSearch, setAnalyticsSearch] = useState('');
 
   useEffect(() => {
-    fetch(`${API_BASE}/config/escuelas`)
+    if (!token) return;
+    fetch(`${API_BASE}/config/escuelas`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => r.json())
       .then(setEscuelas)
       .catch(console.error);
-  }, []);
+  }, [token]);
+
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -70,11 +78,18 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
+        const headers = { 'Authorization': `Bearer ${token}` };
+
         const today = new Date().toISOString().split('T')[0];
-        // Use 'today' as default for summary and charts if no date is selected
-        const summaryDate = fecha || today;
+        // Only use 'today' for display purposes if needed, but let API handle empty fecha for global view
+        const summaryDate = fecha;
+
         
         const queryParams = `page=${page}&size=${pageSize}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}${escuela !== 'Todas' ? `&escuela=${encodeURIComponent(escuela)}` : ''}&fecha=${fecha || ''}`;
         const analyticParams = new URLSearchParams({
@@ -82,59 +97,82 @@ const App: React.FC = () => {
           search: analyticsSearch
         }).toString();
         
+        const responses = await Promise.all([
+          fetch(`${API_BASE}/summary?fecha=${summaryDate}`, { headers }),
+          fetch(`${API_BASE}/personas?${queryParams}`, { headers }),
+          fetch(`${API_BASE}/personas?${queryParams}&clean=true`, { headers }),
+          fetch(`${API_BASE}/charts/hourly?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/lane?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/pie?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/heatmap?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/sequence`, { headers }),
+          fetch(`${API_BASE}/charts/escuela?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/summary-stats?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/duration?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/duration-escuela?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/hourly-escuela?${analyticParams}`, { headers }),
+          fetch(`${API_BASE}/charts/duration-hourly-escuela?${analyticParams}`, { headers })
+        ]);
+
+        if (responses.some(r => r.status === 401)) {
+          handleLogout();
+          return;
+        }
+
         const [
           summaryRes, 
           personasRes, 
           personasCleanRes, 
-          hourlyData, 
-          laneData, 
-          pieData, 
-          heatmapData, 
-          sequenceData, 
-          escuelaData, 
-          summaryStats,
-          durationData,
-          durationEscuelaData,
-          hourlyEscuelaData,
-          durationHourlyEscuelaData
-        ] = await Promise.all([
-          fetch(`${API_BASE}/summary?fecha=${summaryDate}`),
-          fetch(`${API_BASE}/personas?${queryParams}`),
-          fetch(`${API_BASE}/personas?${queryParams}&clean=true`),
-          fetch(`${API_BASE}/charts/hourly?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/lane?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/pie?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/heatmap?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/sequence`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/escuela?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/summary-stats?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/duration?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/duration-escuela?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/hourly-escuela?${analyticParams}`).then(r => r.json()),
-          fetch(`${API_BASE}/charts/duration-hourly-escuela?${analyticParams}`).then(r => r.json())
-        ]);
+          hourlyRes, 
+          laneRes, 
+          pieRes, 
+          heatmapRes, 
+          sequenceRes, 
+          escuelaRes, 
+          summaryStatsRes,
+          durationRes,
+          durationEscuelaRes,
+          hourlyEscuelaRes,
+          durationHourlyEscuelaRes
+        ] = responses;
+
+
 
         const summaryData = await summaryRes.json();
         const personasData = await personasRes.json();
         const personasCleanData = await personasCleanRes.json();
+        
+        const hourlyData = await hourlyRes.json();
+        const laneData = await laneRes.json();
+        const pieData = await pieRes.json();
+        const heatmapData = await heatmapRes.json();
+        const sequenceData = await sequenceRes.json();
+        const escuelaData = await escuelaRes.json();
+        const summaryStats = await summaryStatsRes.json();
+        const durationData = await durationRes.json();
+        const durationEscuelaData = await durationEscuelaRes.json();
+        const hourlyEscuelaData = await hourlyEscuelaRes.json();
+        const durationHourlyEscuelaData = await durationHourlyEscuelaRes.json();
 
         setSummary(summaryData);
-        setPersonas(personasData.items);
-        setPersonasClean(personasCleanData.items);
-        setTotal(personasData.total);
+        setPersonas(personasData.items || []);
+        setPersonasClean(personasCleanData.items || []);
+        setTotal(personasData.total || 0);
+
         setCharts({ 
-          hourly: hourlyData, 
-          lane: laneData, 
-          pie: pieData, 
-          heatmap: heatmapData, 
-          sequence: sequenceData, 
-          escuela: escuelaData, 
-          duration: durationData,
-          durationEscuela: durationEscuelaData,
-          hourlyEscuela: hourlyEscuelaData,
-          durationHourlyEscuela: durationHourlyEscuelaData,
-          summary: summaryStats 
+          hourly: Array.isArray(hourlyData) ? hourlyData : [],
+          lane: Array.isArray(laneData) ? laneData : [],
+          pie: Array.isArray(pieData) ? pieData : [],
+          heatmap: Array.isArray(heatmapData) ? heatmapData : [],
+          sequence: Array.isArray(sequenceData) ? sequenceData : [],
+          escuela: Array.isArray(escuelaData) ? escuelaData : [],
+          duration: Array.isArray(durationData) ? durationData : [],
+          durationEscuela: Array.isArray(durationEscuelaData) ? durationEscuelaData : [],
+          hourlyEscuela: Array.isArray(hourlyEscuelaData) ? hourlyEscuelaData : [],
+          durationHourlyEscuela: Array.isArray(durationHourlyEscuelaData) ? durationHourlyEscuelaData : [],
+          summary: summaryStats || { peak_hour: 'N/A', unique_users: 0 }
         });
+
       } catch (error) {
         console.error("Error fetching data from API:", error);
       } finally {
@@ -147,9 +185,28 @@ const App: React.FC = () => {
     // Configurar auto-refresco cada 30 segundos para monitoreo en tiempo real
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [activeTab, page, searchTerm, pageSize, escuela, fecha, analyticsSearch]);
+  }, [activeTab, page, searchTerm, pageSize, escuela, fecha, analyticsSearch, token]);
+
+  const handleLogin = (newToken: string, newUser: any) => {
+    localStorage.setItem('polaris_token', newToken);
+    localStorage.setItem('polaris_user', JSON.stringify(newUser));
+    setToken(newToken);
+    setUser(newUser);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('polaris_token');
+    localStorage.removeItem('polaris_user');
+    setToken(null);
+    setUser(null);
+  };
+
+  if (!token) {
+    return <LoginView onLogin={handleLogin} />;
+  }
 
   if (loading && !summary) {
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 space-y-6">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-700 shadow-sm"></div>
@@ -236,10 +293,21 @@ const App: React.FC = () => {
                   </h1>
                 </div>
               </div>
-              <div className="text-left md:text-right">
+              <div className="text-left md:text-right flex flex-col items-start md:items-end gap-1">
                 <span className="tech-label-light">SISTEMA EN LÍNEA</span>
                 <p className="text-[10px] md:text-sm font-bold text-slate-400">{new Date().toLocaleDateString()} — {new Date().toLocaleTimeString()}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{user?.nombre || user?.username}</span>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-1.5 bg-slate-200 hover:bg-red-100 text-slate-500 hover:text-red-600 rounded-lg transition-colors"
+                    title="Cerrar Sesión"
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
               </div>
+
             </div>
 
             {activeTab === 'resumen' ? (
@@ -289,19 +357,26 @@ const App: React.FC = () => {
                 selectedDate={fecha} 
                 analyticsSearch={analyticsSearch}
                 onAnalyticsSearch={setAnalyticsSearch}
+                token={token}
               />
+
             ) : activeTab === 'importar' ? (
-              <ImportView />
+              <ImportView token={token} />
+
             ) : activeTab === 'configuracion' ? (
-              <ConfigView />
+              <ConfigView token={token} />
+
             ) : activeTab === 'gestion' ? (
-              <EditView />
+              <EditView token={token} />
+
             ) : activeTab === 'reporte' ? (
               <ReportView 
                 summary={summary} 
                 charts={charts} 
-                selectedDate={fecha} 
+                selectedDate={fecha}
+                token={token}
               />
+
             ) : null}
           </div>
         </div>

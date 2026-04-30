@@ -3,7 +3,12 @@ import { Search, Edit2, Check, X, RefreshCw, ArrowRight } from 'lucide-react';
 
 const API_BASE = "http://localhost:8000/api";
 
-const EditView: React.FC = () => {
+interface EditViewProps {
+  token: string | null;
+}
+
+const EditView: React.FC<EditViewProps> = ({ token }) => {
+
   const [activeSubTab, setActiveSubTab] = useState<'students' | 'normalization'>('students');
   const [students, setStudents] = useState<any[]>([]);
   const [escuelas, setEscuelas] = useState<string[]>([]);
@@ -20,7 +25,10 @@ const EditView: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch(`${API_BASE}/personas?search=${encodeURIComponent(searchTerm)}&size=100`);
+      const res = await fetch(`${API_BASE}/personas?search=${encodeURIComponent(searchTerm)}&size=100`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
       const data = await res.json();
       setStudents(data.items);
     } catch (e) {
@@ -30,7 +38,10 @@ const EditView: React.FC = () => {
 
   const fetchEscuelas = async () => {
     try {
-      const res = await fetch(`${API_BASE}/config/escuelas`);
+      const res = await fetch(`${API_BASE}/config/escuelas`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
       const data = await res.json();
       setEscuelas(data.filter((e: string) => e !== 'Todas'));
     } catch (e) {
@@ -47,9 +58,13 @@ const EditView: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/personas/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(editForm)
       });
+
       if (res.ok) {
         setEditingId(null);
         showStatus('Registro actualizado con éxito', 'success');
@@ -76,9 +91,13 @@ const EditView: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/personas/normalize-escuela`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(normForm)
       });
+
       if (res.ok) {
         setNormForm({ old_name: '', new_name: '' });
         showStatus('Normalización completada con éxito', 'success');

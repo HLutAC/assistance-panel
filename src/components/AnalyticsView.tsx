@@ -22,7 +22,9 @@ interface AnalyticsViewProps {
   selectedDate: string;
   analyticsSearch: string;
   onAnalyticsSearch: (val: string) => void;
+  token: string | null;
 }
+
 
 const COLORS = [
   '#1d4ed8', '#10b981', '#f97316', '#6366f1', '#64748b', 
@@ -31,7 +33,8 @@ const COLORS = [
   '#06b6d4', '#10b981', '#84cc16', '#eab308', '#f97316'
 ];
 
-const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, analyticsSearch, onAnalyticsSearch }) => {
+const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, analyticsSearch, onAnalyticsSearch, token }) => {
+
   const [sequenceSearch, setSequenceSearch] = useState('');
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
   const [drillDownData, setDrillDownData] = useState<any[]>([]);
@@ -155,7 +158,10 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, ana
         global_search: analyticsSearch
       });
       
-      fetch(`${API_BASE}/events/drill-down?${params.toString()}`)
+      fetch(`${API_BASE}/events/drill-down?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
         .then(r => r.json())
         .then(data => {
           if (data && data.items) {
@@ -264,12 +270,12 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, ana
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-4 text-slate-400">
                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 bg-blue-700 rounded-sm"></div>
-                  <span className="text-[9px] font-black uppercase tracking-widest">Ingresos</span>
+                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-sm"></div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Ingresos</span>
                </div>
                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 bg-slate-200 rounded-sm"></div>
-                  <span className="text-[9px] font-black uppercase tracking-widest">Salidas</span>
+                  <div className="w-2.5 h-2.5 bg-orange-500 rounded-sm"></div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Salidas Registradas</span>
                </div>
             </div>
             <span className="text-[10px] font-bold text-slate-300 italic">Haz clic en una columna para ver detalles</span>
@@ -292,8 +298,10 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, ana
               <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: '900', fill: '#94a3b8'}} />
               <Tooltip contentStyle={customTooltipStyle} />
               <Legend iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
-              <Line type="monotone" dataKey="ingresos" stroke="#1d4ed8" strokeWidth={4} dot={{r: 4, fill: '#fff'}} activeDot={{r: 8}} />
-              <Line type="monotone" dataKey="salidas" stroke="#e2e8f0" strokeWidth={2} dot={{r: 0}} />
+              <Line type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={4} dot={{r: 4, fill: '#fff'}} activeDot={{r: 8}} />
+
+              <Line type="monotone" dataKey="salidas" stroke="#f97316" strokeWidth={3} dot={{r: 0}} />
+
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -350,8 +358,10 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, ana
                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
                 <Tooltip contentStyle={customTooltipStyle} />
                 <Legend wrapperStyle={{fontSize: '9px', fontWeight: '900', paddingTop: '20px'}} />
-                <Bar dataKey="ingresos" fill="#1d4ed8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="salidas" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ingresos" fill="#10b981" radius={[4, 4, 0, 0]} />
+
+                <Bar dataKey="salidas" fill="#f97316" radius={[4, 4, 0, 0]} />
+
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -457,7 +467,8 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ charts, selectedDate, ana
                     const percentage = ((hour * 60 + minute) / 1440) * 100;
                     
                     return (
-                      <div key={i} className={`absolute w-1.5 h-6 rounded-full z-10 ${evt.tipo === 1 ? 'bg-blue-600' : 'bg-emerald-500'}`} style={{ left: `${percentage}%` }} title={`${evt.label} - ${evt.t}`} />
+                      <div key={i} className={`absolute w-1.5 h-6 rounded-full z-10 ${evt.tipo === 1 ? 'bg-blue-600' : 'bg-orange-500'}`} style={{ left: `${percentage}%` }} title={`${evt.label} - ${evt.t}`} />
+
                     );
                   })}
               </div>

@@ -11,9 +11,12 @@ interface ReportViewProps {
   summary: any;
   charts: any;
   selectedDate: string;
+  token: string | null;
 }
 
-const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }) => {
+
+const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate, token }) => {
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchId, setSearchId] = useState('');
@@ -31,14 +34,20 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
       try {
         const params = new URLSearchParams();
         if (selectedDate) params.append('fecha', selectedDate);
-        const res = await fetch(`http://${window.location.hostname}:8000/api/reports/global-events?${params.toString()}`);
+        const res = await fetch(`http://${window.location.hostname}:8000/api/reports/global-events?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
         const data = await res.json();
         setGlobalEvents(data);
         
         // If no date is selected, fetch "Today" summary for the KPI part of the report
         if (!selectedDate) {
           const today = new Date().toISOString().split('T')[0];
-          const sumRes = await fetch(`http://${window.location.hostname}:8000/api/summary?fecha=${today}`);
+          const sumRes = await fetch(`http://${window.location.hostname}:8000/api/summary?fecha=${today}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
           const sumData = await sumRes.json();
           setDailySummary(sumData);
         } else {
@@ -61,7 +70,10 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
       const params = new URLSearchParams({ person_id: searchId });
       if (selectedDate) params.append('fecha', selectedDate);
       
-        const res = await fetch(`http://${window.location.hostname}:8000/api/reports/individual?${params.toString()}`);
+        const res = await fetch(`http://${window.location.hostname}:8000/api/reports/individual?${params.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
       const data = await res.json();
       
       if (data.error) {
@@ -265,8 +277,10 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
 
                <div className="grid grid-cols-3 gap-6">
                   {[
-                    { l: 'Ingresos Registrados', v: individualData.stats.ingresos, c: 'text-blue-700' },
-                    { l: 'Salidas Registradas', v: individualData.stats.salidas, c: 'text-emerald-600' },
+                    { l: 'Ingresos Registrados', v: individualData.stats.ingresos, c: 'text-emerald-700' },
+
+                    { l: 'Salidas Registradas', v: individualData.stats.salidas, c: 'text-orange-600' },
+
                     { l: 'Total Movimientos', v: individualData.stats.ingresos + individualData.stats.salidas, c: 'text-slate-900' }
                   ].map((s, i) => (
                     <div key={i} className="p-4 border border-slate-100 rounded-2xl bg-white shadow-sm">
@@ -285,9 +299,11 @@ const ReportView: React.FC<ReportViewProps> = ({ summary, charts, selectedDate }
                      {individualData.events.slice(0, 10).map((evt: any, i: number) => (
                         <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100 group">
                            <div className="flex items-center gap-4">
-                              <div className={`w-2 h-2 rounded-full ${evt.tipo_movimiento === 'INGRESO' ? 'bg-blue-700' : 'bg-emerald-500'}`}></div>
+                              <div className={`w-2 h-2 rounded-full ${evt.tipo_movimiento === 'INGRESO' ? 'bg-emerald-500' : 'bg-orange-500'}`}></div>
                               <span className="text-xs font-black text-slate-800 w-24">{evt.t.split(' ')[1]}</span>
-                              <span className={`text-[10px] font-black uppercase ${evt.tipo_movimiento === 'INGRESO' ? 'text-blue-700' : 'text-emerald-600'}`}>{evt.tipo_movimiento}</span>
+                              <span className={`text-[10px] font-black uppercase ${evt.tipo_movimiento === 'INGRESO' ? 'text-emerald-700' : 'text-orange-600'}`}>{evt.tipo_movimiento}</span>
+
+
                            </div>
                            <span className="text-[10px] font-black text-slate-400 uppercase">Punto de Control: {evt.carril}</span>
                         </div>
